@@ -61,7 +61,7 @@ export class PluginInstallStatusProcessor implements CatalogProcessor {
   private readonly catalog: CatalogApi;
   private readonly logger: LoggerService;
   private readonly cache: CacheService;
-  private readonly cacheTTLSeconds = 30;
+  private readonly cacheTTLSeconds = 100; // default processingInterval = 100-150s
 
   public constructor(deps: {
     auth: AuthService;
@@ -78,7 +78,7 @@ export class PluginInstallStatusProcessor implements CatalogProcessor {
 
     // Set up scheduled refresh of package installStatus to save in cache
     const schedule: SchedulerServiceTaskScheduleDefinition = {
-      frequency: { minutes: 30 },
+      frequency: { seconds: 100 },
       timeout: { minutes: 10 },
       initialDelay: { seconds: 10 },
       scope: 'global',

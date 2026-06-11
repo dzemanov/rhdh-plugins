@@ -38,21 +38,19 @@ export class GithubEntityClient {
     };
   }
 
-  async getOpenPullRequestsCount(entity: Entity): Promise<number> {
+  forEntity(entity: Entity): {
+    getOpenPullRequestsCount(): Promise<number>;
+    getDeployments(): Promise<GithubDeployment[]>;
+    getCommitPullRequests(sha: string): Promise<GithubCommitPullRequest[]>;
+  } {
     const { url, repository } = this.resolveEntityContext(entity);
-    return this.githubClient.getOpenPullRequestsCount(url, repository);
-  }
 
-  async getDeployments(entity: Entity): Promise<GithubDeployment[]> {
-    const { url, repository } = this.resolveEntityContext(entity);
-    return this.githubClient.getDeployments(url, repository);
-  }
-
-  async getCommitPullRequests(
-    entity: Entity,
-    sha: string,
-  ): Promise<GithubCommitPullRequest[]> {
-    const { url, repository } = this.resolveEntityContext(entity);
-    return this.githubClient.getCommitPullRequests(url, repository, sha);
+    return {
+      getOpenPullRequestsCount: () =>
+        this.githubClient.getOpenPullRequestsCount(url, repository),
+      getDeployments: () => this.githubClient.getDeployments(url, repository),
+      getCommitPullRequests: (sha: string) =>
+        this.githubClient.getCommitPullRequests(url, repository, sha),
+    };
   }
 }

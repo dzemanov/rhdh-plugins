@@ -71,9 +71,9 @@ export class GithubOpenPRsProvider implements MetricProvider<'number'> {
   }
 
   async calculateMetric(entity: Entity): Promise<number> {
-    const result = await this.githubEntityClient.getOpenPullRequestsCount(
-      entity,
-    );
+    const result = await this.githubEntityClient
+      .forEntity(entity)
+      .getOpenPullRequestsCount();
 
     return result;
   }

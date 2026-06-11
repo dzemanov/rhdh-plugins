@@ -61,10 +61,9 @@ export const createGithubGetCommitPullsAction = (options: {
       destructive: false,
     },
     action: async ({ input }) => {
-      const pullRequests = await githubEntityClient.getCommitPullRequests(
-        input.entity as Entity,
-        input.sha,
-      );
+      const pullRequests = await githubEntityClient
+        .forEntity(input.entity as Entity)
+        .getCommitPullRequests(input.sha);
 
       return {
         output: {

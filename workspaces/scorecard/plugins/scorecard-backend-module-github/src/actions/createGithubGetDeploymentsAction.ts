@@ -61,9 +61,9 @@ export const createGithubGetDeploymentsAction = (options: {
       destructive: false,
     },
     action: async ({ input }) => {
-      const deployments = await githubEntityClient.getDeployments(
-        input.entity as Entity,
-      );
+      const deployments = await githubEntityClient
+        .forEntity(input.entity as Entity)
+        .getDeployments();
 
       return {
         output: {

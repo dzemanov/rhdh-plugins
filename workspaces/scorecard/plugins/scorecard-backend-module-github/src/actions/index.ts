@@ -13,19 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export type GithubRepository = {
-  owner: string;
-  repo: string;
-};
+import { ActionsRegistryService } from '@backstage/backend-plugin-api/alpha';
+import { GithubEntityClient } from '../github/GithubEntityClient';
+import { createGithubGetCommitPullsAction } from './createGithubGetCommitPullsAction';
+import { createGithubGetDeploymentsAction } from './createGithubGetDeploymentsAction';
 
-export type GithubDeployment = {
-  id: number;
-  sha: string;
-  createdAt: string;
-  environment: string;
-};
-
-export type GithubCommitPullRequest = {
-  number: number;
-  mergedAt: string | undefined;
+export const createGithubActions = (options: {
+  actionsRegistry: ActionsRegistryService;
+  githubEntityClient: GithubEntityClient;
+}) => {
+  createGithubGetDeploymentsAction(options);
+  createGithubGetCommitPullsAction(options);
 };

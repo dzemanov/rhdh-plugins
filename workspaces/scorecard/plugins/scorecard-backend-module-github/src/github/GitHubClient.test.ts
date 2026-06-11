@@ -93,4 +93,48 @@ describe('GithubClient', () => {
       ).rejects.toThrow(`Missing GitHub integration for '${unknownUrl}'`);
     });
   });
+
+  describe('getDeployments', () => {
+    it('should return deployments with deployment sha and createdAt', async () => {
+      const url = `https://github.com/owner/repo`;
+      mockedGraphqlClient.mockResolvedValue({});
+
+      const deployments = await githubClient.getDeployments(url, repository);
+
+      expect(deployments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(Number),
+            sha: expect.any(String),
+            createdAt: expect.any(String),
+          }),
+        ]),
+      );
+      expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
+    });
+  });
+
+  describe('getCommitPullRequests', () => {
+    it('should return pull requests linked to a commit sha', async () => {
+      const url = `https://github.com/owner/repo`;
+      const sha = '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1';
+      mockedGraphqlClient.mockResolvedValue({});
+
+      const pullRequests = await githubClient.getCommitPullRequests(
+        url,
+        repository,
+        sha,
+      );
+
+      expect(pullRequests).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            number: expect.any(Number),
+            mergedAt: expect.any(String),
+          }),
+        ]),
+      );
+      expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
+    });
+  });
 });

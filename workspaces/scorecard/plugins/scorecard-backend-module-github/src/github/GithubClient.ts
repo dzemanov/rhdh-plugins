@@ -19,7 +19,11 @@ import {
   DefaultGithubCredentialsProvider,
   ScmIntegrations,
 } from '@backstage/integration';
-import { GithubRepository } from './types';
+import {
+  GithubCommitPullRequest,
+  GithubDeployment,
+  GithubRepository,
+} from './types';
 
 export class GithubClient {
   private readonly integrations: ScmIntegrations;
@@ -76,5 +80,45 @@ export class GithubClient {
     });
 
     return response.repository.pullRequests.totalCount;
+  }
+
+  async getDeployments(
+    url: string,
+    _repository: GithubRepository,
+  ): Promise<GithubDeployment[]> {
+    await this.getOctokitClient(url);
+
+    return [
+      {
+        id: 101,
+        sha: '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1',
+        createdAt: '2026-06-06T11:00:00.000Z',
+        environment: 'production',
+      },
+      {
+        id: 102,
+        sha: '4a86ae7f6f76536c0371f00f0306d5c398f9961c',
+        createdAt: '2026-06-07T10:30:00.000Z',
+        environment: 'production',
+      },
+    ];
+  }
+
+  async getCommitPullRequests(
+    url: string,
+    _repository: GithubRepository,
+    sha: string,
+  ): Promise<GithubCommitPullRequest[]> {
+    await this.getOctokitClient(url);
+
+    return [
+      {
+        number: 501,
+        mergedAt:
+          sha === '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1'
+            ? '2026-06-04T08:00:00.000Z'
+            : '2026-06-06T18:00:00.000Z',
+      },
+    ];
   }
 }

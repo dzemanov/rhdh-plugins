@@ -15,7 +15,7 @@
  */
 
 import type { Config } from '@backstage/config';
-import { getEntitySourceLocation, type Entity } from '@backstage/catalog-model';
+import type { Entity } from '@backstage/catalog-model';
 import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 import {
   DEFAULT_NUMBER_THRESHOLDS,
@@ -24,13 +24,13 @@ import {
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { MetricProvider } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { GithubClient } from '../github/GithubClient';
-import { getRepositoryInformationFromEntity } from '../github/utils';
+import { GithubEntityClient } from '../github/GithubEntityClient';
 
 export class GithubOpenPRsProvider implements MetricProvider<'number'> {
-  private readonly githubClient: GithubClient;
+  private readonly githubEntityClient: GithubEntityClient;
 
   private constructor(config: Config) {
-    this.githubClient = new GithubClient(config);
+    this.githubEntityClient = new GithubEntityClient(new GithubClient(config));
   }
 
   getProviderDatasourceId(): string {
@@ -71,12 +71,8 @@ export class GithubOpenPRsProvider implements MetricProvider<'number'> {
   }
 
   async calculateMetric(entity: Entity): Promise<number> {
-    const repository = getRepositoryInformationFromEntity(entity);
-    const { target } = getEntitySourceLocation(entity);
-
-    const result = await this.githubClient.getOpenPullRequestsCount(
-      target,
-      repository,
+    const result = await this.githubEntityClient.getOpenPullRequestsCount(
+      entity,
     );
 
     return result;

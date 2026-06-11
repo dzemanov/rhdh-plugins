@@ -17,7 +17,11 @@ import {
   coreServices,
   createBackendModule,
 } from '@backstage/backend-plugin-api';
+import { actionsRegistryServiceRef } from '@backstage/backend-plugin-api/alpha';
 import { scorecardMetricsExtensionPoint } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import { createGithubActions } from './actions';
+import { GithubClient } from './github/GithubClient';
+import { GithubEntityClient } from './github/GithubEntityClient';
 import { GithubOpenPRsProvider } from './metricProviders/GithubOpenPRsProvider';
 
 export const scorecardModuleGithub = createBackendModule({
@@ -26,11 +30,19 @@ export const scorecardModuleGithub = createBackendModule({
   register(reg) {
     reg.registerInit({
       deps: {
+        actionsRegistry: actionsRegistryServiceRef,
         config: coreServices.rootConfig,
         metrics: scorecardMetricsExtensionPoint,
       },
-      async init({ config, metrics }) {
+      async init({ actionsRegistry, config, metrics }) {
+        const githubEntityClient = new GithubEntityClient(
+          new GithubClient(config),
+        );
         metrics.addMetricProvider(GithubOpenPRsProvider.fromConfig(config));
+        createGithubActions({
+          actionsRegistry,
+          githubEntityClient,
+        });
       },
     });
   },

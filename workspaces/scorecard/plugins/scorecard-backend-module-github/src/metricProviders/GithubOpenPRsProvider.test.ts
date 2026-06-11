@@ -15,19 +15,11 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import type { Entity } from '@backstage/catalog-model';
 import { GithubOpenPRsProvider } from './GithubOpenPRsProvider';
-import { GithubClient } from '../github/GithubClient';
+import { GithubEntityClient } from '../github/GithubEntityClient';
 import { DEFAULT_NUMBER_THRESHOLDS } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 
-jest.mock('@backstage/catalog-model', () => ({
-  ...jest.requireActual('@backstage/catalog-model'),
-  getEntitySourceLocation: jest.fn().mockReturnValue({
-    type: 'url',
-    target: 'https://github.com/org/orgRepo/tree/main/',
-  }),
-}));
-jest.mock('../github/GithubClient');
+jest.mock('../github/GithubEntityClient');
 
 describe('GithubOpenPRsProvider', () => {
   describe('fromConfig', () => {
@@ -39,14 +31,14 @@ describe('GithubOpenPRsProvider', () => {
   });
 
   describe('calculateMetric', () => {
-    let provider: GithubOpenPRsProvider;
-    const mockedGithubClient = GithubClient as jest.MockedClass<
-      typeof GithubClient
-    >;
-    const mockedGithubClientInstance = {
+    let provider;
+    const mockedGithubEntityClient = GithubEntityClient;
+    const mockedGithubEntityClientInstance = {
       getOpenPullRequestsCount: jest.fn(),
-    } as any;
-    mockedGithubClient.mockImplementation(() => mockedGithubClientInstance);
+    };
+    mockedGithubEntityClient.mockImplementation(
+      () => mockedGithubEntityClientInstance,
+    );
 
     beforeEach(() => {
       jest.clearAllMocks();
@@ -54,8 +46,10 @@ describe('GithubOpenPRsProvider', () => {
     });
 
     it('should calculate metric', async () => {
-      mockedGithubClientInstance.getOpenPullRequestsCount.mockResolvedValue(42);
-      const mockEntity: Entity = {
+      mockedGithubEntityClientInstance.getOpenPullRequestsCount.mockResolvedValue(
+        42,
+      );
+      const mockEntity = {
         apiVersion: 'backstage.io/v1alpha1',
         kind: 'Component',
         metadata: {
@@ -70,11 +64,8 @@ describe('GithubOpenPRsProvider', () => {
 
       expect(result).toBe(42);
       expect(
-        mockedGithubClientInstance.getOpenPullRequestsCount,
-      ).toHaveBeenCalledWith('https://github.com/org/orgRepo/tree/main/', {
-        owner: 'org',
-        repo: 'orgRepo',
-      });
+        mockedGithubEntityClientInstance.getOpenPullRequestsCount,
+      ).toHaveBeenCalledWith(mockEntity);
     });
   });
 });

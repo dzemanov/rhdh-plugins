@@ -21,7 +21,9 @@ import {
 } from '@backstage/integration';
 import {
   GithubCommitPullRequest,
+  GithubCommitPullRequestsQueryResponse,
   GithubDeployment,
+  GithubDeploymentsQueryResponse,
   GithubRepository,
 } from './types';
 
@@ -84,41 +86,134 @@ export class GithubClient {
 
   async getDeployments(
     url: string,
-    _repository: GithubRepository,
+    repository: GithubRepository,
+    from: string,
+    to: string,
   ): Promise<GithubDeployment[]> {
-    await this.getOctokitClient(url);
+    const fromTimestamp = Date.parse(from);
+    const toTimestamp = Date.parse(to);
+    if (Number.isNaN(fromTimestamp) || Number.isNaN(toTimestamp)) {
+      throw new Error(
+        `Invalid deployments date range. from='${from}', to='${to}'`,
+      );
+    }
 
-    return [
-      {
-        id: 101,
-        sha: '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1',
-        createdAt: '2026-06-06T11:00:00.000Z',
-        environment: 'production',
-      },
-      {
-        id: 102,
-        sha: '4a86ae7f6f76536c0371f00f0306d5c398f9961c',
-        createdAt: '2026-06-07T10:30:00.000Z',
-        environment: 'production',
-      },
-    ];
+    const octokit = await this.getOctokitClient(url);
+    const deployments: GithubDeployment[] = [];
+    const query = `
+      query getDeployments($owner: String!, $repo: String!, $after: String) {
+        repository(owner: $owner, name: $repo) {
+          deployments(
+            first: 100
+            orderBy: { field: CREATED_AT, direction: DESC }
+            after: $after
+          ) {
+            nodes {
+              databaseId
+              commitOid
+              createdAt
+              environment
+              latestStatus {
+                state
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+    let after: string | null = null;
+    let hasMorePages = true;
+    let reachedOlderThanWindow = false;
+
+    while (hasMorePages) {
+      const response: GithubDeploymentsQueryResponse = await octokit(query, {
+        owner: repository.owner,
+        repo: repository.repo,
+        after,
+      });
+
+      const pageDeployments = response.repository.deployments.nodes;
+
+      if (pageDeployments.length === 0) {
+        break;
+      }
+
+      for (const deployment of pageDeployments) {
+        if (!deployment.databaseId || !deployment.commitOid) {
+          continue;
+        }
+
+        const deployedAt = Date.parse(deployment.createdAt);
+        if (Number.isNaN(deployedAt)) {
+          continue;
+        }
+
+        if (deployedAt < fromTimestamp) {
+          reachedOlderThanWindow = true;
+        }
+
+        if (deployedAt >= fromTimestamp && deployedAt <= toTimestamp) {
+          deployments.push({
+            id: deployment.databaseId,
+            sha: deployment.commitOid,
+            createdAt: deployment.createdAt,
+            environment: deployment.environment ?? 'unknown',
+            status: deployment.latestStatus?.state ?? 'unknown',
+          });
+        }
+      }
+
+      hasMorePages =
+        !reachedOlderThanWindow &&
+        response.repository.deployments.pageInfo.hasNextPage;
+      after = response.repository.deployments.pageInfo.endCursor;
+    }
+
+    return deployments;
   }
 
   async getCommitPullRequests(
     url: string,
-    _repository: GithubRepository,
+    repository: GithubRepository,
     sha: string,
   ): Promise<GithubCommitPullRequest[]> {
-    await this.getOctokitClient(url);
+    const octokit = await this.getOctokitClient(url);
+    const query = `
+      query getCommitPullRequests($owner: String!, $repo: String!, $sha: String!) {
+        repository(owner: $owner, name: $repo) {
+          object(expression: $sha) {
+            ... on Commit {
+              associatedPullRequests(first: 50) {
+                nodes {
+                  number
+                  mergedAt
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
 
-    return [
+    const response = await octokit<GithubCommitPullRequestsQueryResponse>(
+      query,
       {
-        number: 501,
-        mergedAt:
-          sha === '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1'
-            ? '2026-06-04T08:00:00.000Z'
-            : '2026-06-06T18:00:00.000Z',
+        owner: repository.owner,
+        repo: repository.repo,
+        sha,
       },
-    ];
+    );
+
+    const pullRequests =
+      response.repository.object?.associatedPullRequests?.nodes ?? [];
+
+    return pullRequests.map(pr => ({
+      number: pr.number,
+      mergedAt: pr.mergedAt ?? undefined,
+    }));
   }
 }

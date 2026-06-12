@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import type { GraphQlQueryResponseData } from '@octokit/graphql';
+
 export type GithubRepository = {
   owner: string;
   repo: string;
@@ -23,9 +25,43 @@ export type GithubDeployment = {
   sha: string;
   createdAt: string;
   environment: string;
+  status: string;
 };
 
 export type GithubCommitPullRequest = {
   number: number;
   mergedAt: string | undefined;
+};
+
+export type GithubDeploymentsQueryResponse = GraphQlQueryResponseData & {
+  repository: {
+    deployments: {
+      nodes: Array<{
+        databaseId?: number | null;
+        commitOid?: string | null;
+        createdAt: string;
+        environment?: string | null;
+        latestStatus?: {
+          state?: string | null;
+        } | null;
+      }>;
+      pageInfo: {
+        hasNextPage: boolean;
+        endCursor: string | null;
+      };
+    };
+  };
+};
+
+export type GithubCommitPullRequestsQueryResponse = GraphQlQueryResponseData & {
+  repository: {
+    object?: {
+      associatedPullRequests?: {
+        nodes: Array<{
+          number: number;
+          mergedAt?: string | null;
+        }>;
+      };
+    } | null;
+  };
 };

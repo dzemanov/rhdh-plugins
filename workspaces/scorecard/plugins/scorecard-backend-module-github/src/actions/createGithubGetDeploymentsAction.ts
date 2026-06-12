@@ -26,7 +26,7 @@ export const createGithubGetDeploymentsAction = (options: {
   actionsRegistry.register({
     name: 'github:get-deployments',
     title: 'Get GitHub Deployments',
-    description: 'Returns deployments for a GitHub repository.',
+    description: 'Returns deployments for a GitHub repository in a date range.',
     schema: {
       input: z =>
         z.object({
@@ -42,6 +42,8 @@ export const createGithubGetDeploymentsAction = (options: {
                 .passthrough(),
             })
             .passthrough(),
+          from: z.string().datetime(),
+          to: z.string().datetime(),
         }),
       output: z =>
         z.object({
@@ -51,6 +53,7 @@ export const createGithubGetDeploymentsAction = (options: {
               sha: z.string(),
               createdAt: z.string(),
               environment: z.string(),
+              status: z.string(),
             }),
           ),
         }),
@@ -63,7 +66,7 @@ export const createGithubGetDeploymentsAction = (options: {
     action: async ({ input }) => {
       const deployments = await githubEntityClient
         .forEntity(input.entity as Entity)
-        .getDeployments();
+        .getDeployments(input.from, input.to);
 
       return {
         output: {

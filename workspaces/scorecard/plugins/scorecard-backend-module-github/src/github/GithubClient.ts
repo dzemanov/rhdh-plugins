@@ -29,9 +29,12 @@ import {
 
 export class GithubClient {
   private readonly integrations: ScmIntegrations;
+  private readonly credentialsProvider: DefaultGithubCredentialsProvider;
 
   constructor(config: Config) {
     this.integrations = ScmIntegrations.fromConfig(config);
+    this.credentialsProvider =
+      DefaultGithubCredentialsProvider.fromIntegrations(this.integrations);
   }
 
   private async getOctokitClient(url: string): Promise<typeof graphql> {
@@ -40,10 +43,7 @@ export class GithubClient {
       throw new Error(`Missing GitHub integration for '${url}'`);
     }
 
-    const credentialsProvider =
-      DefaultGithubCredentialsProvider.fromIntegrations(this.integrations);
-
-    const { headers } = await credentialsProvider.getCredentials({
+    const { headers } = await this.credentialsProvider.getCredentials({
       url,
     });
 

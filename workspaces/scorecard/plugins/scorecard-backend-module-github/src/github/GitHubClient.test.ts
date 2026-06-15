@@ -97,8 +97,8 @@ describe('GithubClient', () => {
   describe('getDeployments', () => {
     it('should return deployments filtered by date window', async () => {
       const url = `https://github.com/owner/repo`;
-      const from = '2026-05-01T00:00:00.000Z';
-      const to = '2026-05-31T23:59:59.000Z';
+      const from = new Date('2026-05-01T00:00:00.000Z');
+      const to = new Date('2026-05-31T23:59:59.000Z');
       mockedGraphqlClient.mockResolvedValue({
         repository: {
           deployments: {

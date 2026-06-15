@@ -87,17 +87,9 @@ export class GithubClient {
   async getDeployments(
     url: string,
     repository: GithubRepository,
-    from: string,
-    to: string,
+    from: Date,
+    to: Date,
   ): Promise<GithubDeployment[]> {
-    const fromTimestamp = Date.parse(from);
-    const toTimestamp = Date.parse(to);
-    if (Number.isNaN(fromTimestamp) || Number.isNaN(toTimestamp)) {
-      throw new Error(
-        `Invalid deployments date range. from='${from}', to='${to}'`,
-      );
-    }
-
     const octokit = await this.getOctokitClient(url);
     const deployments: GithubDeployment[] = [];
     const query = `
@@ -125,6 +117,8 @@ export class GithubClient {
         }
       }
     `;
+    const fromTimestamp = from.getTime();
+    const toTimestamp = to.getTime();
     let after: string | null = null;
     let hasMorePages = true;
     let reachedOlderThanWindow = false;

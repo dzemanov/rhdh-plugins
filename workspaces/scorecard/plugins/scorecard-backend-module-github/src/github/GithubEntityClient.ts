@@ -40,7 +40,7 @@ export class GithubEntityClient {
 
   forEntity(entity: Entity): {
     getOpenPullRequestsCount(): Promise<number>;
-    getDeployments(from: string, to: string): Promise<GithubDeployment[]>;
+    getDeployments(from: Date, to: Date): Promise<GithubDeployment[]>;
     getCommitPullRequests(sha: string): Promise<GithubCommitPullRequest[]>;
   } {
     const { url, repository } = this.resolveEntityContext(entity);
@@ -48,7 +48,7 @@ export class GithubEntityClient {
     return {
       getOpenPullRequestsCount: () =>
         this.githubClient.getOpenPullRequestsCount(url, repository),
-      getDeployments: (from: string, to: string) =>
+      getDeployments: (from: Date, to: Date) =>
         this.githubClient.getDeployments(url, repository, from, to),
       getCommitPullRequests: (sha: string) =>
         this.githubClient.getCommitPullRequests(url, repository, sha),

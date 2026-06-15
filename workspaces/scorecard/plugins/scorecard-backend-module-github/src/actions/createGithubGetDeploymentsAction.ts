@@ -17,6 +17,8 @@ import { ActionsRegistryService } from '@backstage/backend-plugin-api/alpha';
 import type { Entity } from '@backstage/catalog-model';
 import { GithubEntityClient } from '../github/GithubEntityClient';
 
+const MAX_DEPLOYMENTS_WINDOW_MS = 180 * 24 * 60 * 60 * 1000;
+
 export const createGithubGetDeploymentsAction = (options: {
   actionsRegistry: ActionsRegistryService;
   githubEntityClient: GithubEntityClient;
@@ -64,9 +66,21 @@ export const createGithubGetDeploymentsAction = (options: {
       destructive: false,
     },
     action: async ({ input }) => {
+      const fromDate = new Date(input.from);
+      const toDate = new Date(input.to);
+      if (fromDate >= toDate) {
+        throw new Error('`from` must be before `to`');
+      }
+
+      if (toDate.getTime() - fromDate.getTime() > MAX_DEPLOYMENTS_WINDOW_MS) {
+        throw new Error(
+          'Date range is too large. Maximum supported window is 180 days.',
+        );
+      }
+
       const deployments = await githubEntityClient
         .forEntity(input.entity as Entity)
-        .getDeployments(input.from, input.to);
+        .getDeployments(fromDate, toDate);
 
       return {
         output: {

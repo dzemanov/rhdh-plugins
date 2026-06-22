@@ -1,0 +1,58 @@
+/*
+ * Copyright Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { SchedulerServiceTaskScheduleDefinitionConfig } from '@backstage/backend-plugin-api';
+
+export interface Config {
+  /** Configuration for scorecard plugin */
+  scorecard?: {
+    plugins?: {
+      dora?: {
+        deployment_frequency?: {
+          collectors?: {
+            deployments?: {
+              id?: string;
+            };
+          };
+          thresholds?: {
+            rules?: Array<{
+              key: string;
+              expression: string;
+            }>;
+          };
+          schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
+        };
+        lead_time_for_changes?: {
+          collectors?: {
+            deployments?: {
+              id?: string;
+            };
+            commit_pull_requests?: {
+              id?: string;
+            };
+          };
+          thresholds?: {
+            rules?: Array<{
+              key: string;
+              expression: string;
+            }>;
+          };
+          schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
+        };
+      };
+    };
+  };
+}

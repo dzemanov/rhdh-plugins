@@ -17,7 +17,12 @@ import {
   coreServices,
   createBackendModule,
 } from '@backstage/backend-plugin-api';
-import { scorecardMetricsExtensionPoint } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import {
+  scorecardCollectorsExtensionPoint,
+  scorecardMetricsExtensionPoint,
+} from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import { GithubCommitPullRequestsCollector } from './collectors/GithubCommitPullRequestsCollector';
+import { GithubDeploymentsCollector } from './collectors/GithubDeploymentsCollector';
 import { GithubOpenPRsProvider } from './metricProviders/GithubOpenPRsProvider';
 
 export const scorecardModuleGithub = createBackendModule({
@@ -26,10 +31,15 @@ export const scorecardModuleGithub = createBackendModule({
   register(reg) {
     reg.registerInit({
       deps: {
+        collectors: scorecardCollectorsExtensionPoint,
         config: coreServices.rootConfig,
         metrics: scorecardMetricsExtensionPoint,
       },
-      async init({ config, metrics }) {
+      async init({ collectors, config, metrics }) {
+        collectors.addCollector(
+          GithubDeploymentsCollector.fromConfig(config),
+          GithubCommitPullRequestsCollector.fromConfig(config),
+        );
         metrics.addMetricProvider(GithubOpenPRsProvider.fromConfig(config));
       },
     });

@@ -1,3 +1,5 @@
+import { GraphQlQueryResponseData } from '@octokit/graphql';
+
 /*
  * Copyright Red Hat, Inc.
  *
@@ -16,4 +18,50 @@
 export type GithubRepository = {
   owner: string;
   repo: string;
+};
+
+export type GithubDeployment = {
+  id: number;
+  sha: string;
+  createdAt: string;
+  environment: string;
+  status: string;
+};
+
+export type GithubPullRequest = {
+  number: number;
+  mergedAt: string | null;
+};
+
+export type GithubDeploymentsQueryResponse = GraphQlQueryResponseData & {
+  repository: {
+    deployments: {
+      nodes: Array<{
+        databaseId?: number | null;
+        commitOid?: string | null;
+        createdAt: string;
+        environment?: string | null;
+        latestStatus?: {
+          state?: string | null;
+        } | null;
+      }>;
+      pageInfo: {
+        hasNextPage: boolean;
+        endCursor: string | null;
+      };
+    };
+  };
+};
+
+export type GithubCommitPullRequestsQueryResponse = GraphQlQueryResponseData & {
+  repository: {
+    object?: {
+      associatedPullRequests?: {
+        nodes: Array<{
+          number: number;
+          mergedAt?: string | null;
+        }>;
+      };
+    } | null;
+  };
 };

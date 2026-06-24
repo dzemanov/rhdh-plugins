@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import { createExtensionPoint } from '@backstage/backend-plugin-api';
-import { Collector, MetricProvider } from './api';
+import {
+  createExtensionPoint,
+  createServiceRef,
+} from '@backstage/backend-plugin-api';
+import { Collector, CollectorRegistry, MetricProvider } from './api';
 
 /**
  * Interface for the Scorecard metrics extension point
@@ -40,15 +43,22 @@ export const scorecardMetricsExtensionPoint =
  */
 export interface ScorecardCollectorsExtensionPoint {
   addCollector(...collectors: Array<Collector>): void;
-  getCollector(collectorId: string): Collector;
-  hasCollector(collectorId: string): boolean;
 }
 
 /**
- * Extension point for adding and consuming collectors in the Scorecard plugin
+ * Extension point for adding collectors in the Scorecard plugin
  * @public
  */
 export const scorecardCollectorsExtensionPoint =
   createExtensionPoint<ScorecardCollectorsExtensionPoint>({
     id: 'scorecard.collectors',
+  });
+
+/**
+ * Service ref for resolving collectors from metric providers.
+ * @public
+ */
+export const scorecardCollectorRegistryServiceRef =
+  createServiceRef<CollectorRegistry>({
+    id: 'scorecard.collector-registry',
   });

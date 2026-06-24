@@ -7,6 +7,7 @@ import type { Config } from '@backstage/config';
 import { CustomErrorBase } from '@backstage/errors';
 import type { Entity } from '@backstage/catalog-model';
 import { ExtensionPoint } from '@backstage/backend-plugin-api';
+import { ServiceRef } from '@backstage/backend-plugin-api';
 import type { JsonValue } from '@backstage/types';
 import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { MetricType } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
@@ -105,14 +106,13 @@ export type RangeOperator = {
 export interface ScorecardCollectorsExtensionPoint {
   // (undocumented)
   addCollector(...collectors: Array<Collector>): void;
-  // (undocumented)
-  getCollector(collectorId: string): Collector;
-  // (undocumented)
-  hasCollector(collectorId: string): boolean;
 }
 
 // @public
 export const scorecardCollectorsExtensionPoint: ExtensionPoint<ScorecardCollectorsExtensionPoint>;
+
+// @public
+export const scorecardCollectorRegistryServiceRef: ServiceRef<CollectorRegistry, "plugin", "singleton">;
 
 // @public
 export interface ScorecardMetricsExtensionPoint {

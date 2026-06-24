@@ -17,7 +17,7 @@
 import { ConflictError, NotFoundError } from '@backstage/errors';
 import type { Collector } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 
-export class CollectorRegistry {
+export class CollectorRegistryStore {
   private readonly collectors = new Map<string, Collector>();
 
   register(collector: Collector): void {

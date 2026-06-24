@@ -20,12 +20,12 @@ import {
 import { createRouter } from './service/router';
 import { catalogServiceRef } from '@backstage/plugin-catalog-node';
 import {
+  Collector,
   MetricProvider,
   scorecardCollectorsExtensionPoint,
   scorecardMetricsExtensionPoint,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { MetricProvidersRegistry } from './providers/MetricProvidersRegistry';
-import { CollectorRegistry } from './providers/CollectorRegistry';
 import { CatalogMetricService } from './service/CatalogMetricService';
 import { ThresholdEvaluator } from './threshold/ThresholdEvaluator';
 import { scorecardPermissions } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
@@ -39,132 +39,133 @@ import { Scheduler } from './scheduler';
 import { validateAggregationConfig } from './validation/validateAggregationConfig';
 import { AggregationsService } from './service/aggregations/AggregationService';
 import { ThresholdResolver } from './threshold/ThresholdResolver';
+import { CollectorRegistryStore } from './providers/CollectorRegistry';
+
+type ScorecardPluginOptions = {
+  collectorRegistryStore: CollectorRegistryStore;
+};
 
 /**
  * scorecardPlugin backend plugin
  *
  * @public
  */
-export const scorecardPlugin = createBackendPlugin({
-  pluginId: 'scorecard',
-  register(env) {
-    const metricProvidersRegistry = new MetricProvidersRegistry();
-    const collectorRegistry = new CollectorRegistry();
+export function createScorecardPlugin(options: ScorecardPluginOptions) {
+  return createBackendPlugin({
+    pluginId: 'scorecard',
+    register(env) {
+      const metricProvidersRegistry = new MetricProvidersRegistry();
+      const collectorRegistry = options.collectorRegistryStore;
 
-    env.registerExtensionPoint(scorecardMetricsExtensionPoint, {
-      addMetricProvider(...newMetricProviders: MetricProvider[]) {
-        newMetricProviders.forEach(metricProvider => {
-          metricProvidersRegistry.register(metricProvider);
-        });
-      },
-    });
-    env.registerExtensionPoint(scorecardCollectorsExtensionPoint, {
-      addCollector(...collectors) {
-        collectors.forEach(collector => {
-          collectorRegistry.register(collector);
-        });
-      },
-      getCollector(collectorId: string) {
-        return collectorRegistry.getCollector(collectorId);
-      },
-      hasCollector(collectorId: string) {
-        return collectorRegistry.hasCollector(collectorId);
-      },
-    });
+      env.registerExtensionPoint(scorecardMetricsExtensionPoint, {
+        addMetricProvider(...newMetricProviders: MetricProvider[]) {
+          newMetricProviders.forEach(metricProvider => {
+            metricProvidersRegistry.register(metricProvider);
+          });
+        },
+      });
+      env.registerExtensionPoint(scorecardCollectorsExtensionPoint, {
+        addCollector(...collectors: Collector[]) {
+          collectors.forEach(collector =>
+            collectorRegistry.register(collector),
+          );
+        },
+      });
 
-    env.registerInit({
-      deps: {
-        auth: coreServices.auth,
-        catalog: catalogServiceRef,
-        config: coreServices.rootConfig,
-        database: coreServices.database,
-        httpRouter: coreServices.httpRouter,
-        httpAuth: coreServices.httpAuth,
-        logger: coreServices.logger,
-        permissions: coreServices.permissions,
-        permissionsRegistry: coreServices.permissionsRegistry,
-        scheduler: coreServices.scheduler,
-      },
-      async init({
-        auth,
-        catalog,
-        config,
-        database,
-        httpRouter,
-        httpAuth,
-        logger,
-        permissions,
-        permissionsRegistry,
-        scheduler,
-      }) {
-        permissionsRegistry.addResourceType({
-          resourceRef: scorecardMetricPermissionResourceRef,
-          getResources: async (resourceRefs: string[]) => {
-            return metricProvidersRegistry.listMetrics(resourceRefs);
-          },
-          permissions: scorecardPermissions,
-          rules: Object.values(scorecardRules),
-        });
-
-        // Run database migrations
-        await migrate(database);
-
-        const client = await database.getClient();
-        const dbMetricValues = new DatabaseMetricValues(client);
-        const thresholdResolver = new ThresholdResolver(
-          config,
-          metricProvidersRegistry.listProviders(),
-        );
-
-        const catalogMetricService = new CatalogMetricService({
-          catalog,
-          auth,
-          registry: metricProvidersRegistry,
-          database: dbMetricValues,
-          logger: logger,
-          thresholdResolver,
-        });
-
-        const aggregationsService = new AggregationsService({
-          config,
-          database: dbMetricValues,
-          logger: logger,
-        });
-
-        validateAggregationConfig({
-          rootConfig: config,
-          registry: metricProvidersRegistry,
-        });
-
-        Scheduler.create({
+      env.registerInit({
+        deps: {
+          auth: coreServices.auth,
+          catalog: catalogServiceRef,
+          config: coreServices.rootConfig,
+          database: coreServices.database,
+          httpRouter: coreServices.httpRouter,
+          httpAuth: coreServices.httpAuth,
+          logger: coreServices.logger,
+          permissions: coreServices.permissions,
+          permissionsRegistry: coreServices.permissionsRegistry,
+          scheduler: coreServices.scheduler,
+        },
+        async init({
           auth,
           catalog,
           config,
+          database,
+          httpRouter,
+          httpAuth,
           logger,
+          permissions,
+          permissionsRegistry,
           scheduler,
-          database: dbMetricValues,
-          metricProvidersRegistry,
-          thresholdEvaluator: new ThresholdEvaluator(),
-          thresholdResolver,
-        }).start();
+        }) {
+          permissionsRegistry.addResourceType({
+            resourceRef: scorecardMetricPermissionResourceRef,
+            getResources: async (resourceRefs: string[]) => {
+              return metricProvidersRegistry.listMetrics(resourceRefs);
+            },
+            permissions: scorecardPermissions,
+            rules: Object.values(scorecardRules),
+          });
 
-        const service = {
-          aggregationsService: aggregationsService,
-          catalogMetricService: catalogMetricService,
-        };
+          // Run database migrations
+          await migrate(database);
 
-        httpRouter.use(
-          await createRouter({
-            metricProvidersRegistry,
-            service,
+          const client = await database.getClient();
+          const dbMetricValues = new DatabaseMetricValues(client);
+          const thresholdResolver = new ThresholdResolver(
+            config,
+            metricProvidersRegistry.listProviders(),
+          );
+
+          const catalogMetricService = new CatalogMetricService({
             catalog,
-            httpAuth,
-            permissions,
-            logger,
+            auth,
+            registry: metricProvidersRegistry,
+            database: dbMetricValues,
+            logger: logger,
             thresholdResolver,
-          }),
-        );
-      },
-    });
-  },
-});
+          });
+
+          const aggregationsService = new AggregationsService({
+            config,
+            database: dbMetricValues,
+            logger: logger,
+          });
+
+          validateAggregationConfig({
+            rootConfig: config,
+            registry: metricProvidersRegistry,
+          });
+
+          Scheduler.create({
+            auth,
+            catalog,
+            config,
+            logger,
+            scheduler,
+            database: dbMetricValues,
+            metricProvidersRegistry,
+            thresholdEvaluator: new ThresholdEvaluator(),
+            thresholdResolver,
+          }).start();
+
+          const service = {
+            aggregationsService: aggregationsService,
+            catalogMetricService: catalogMetricService,
+          };
+
+          httpRouter.use(
+            await createRouter({
+              metricProvidersRegistry,
+              service,
+              catalog,
+              httpAuth,
+              permissions,
+              logger,
+              thresholdResolver,
+            }),
+          );
+        },
+      });
+    },
+  });
+}

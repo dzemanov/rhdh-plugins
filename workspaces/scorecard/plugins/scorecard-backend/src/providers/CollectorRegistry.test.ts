@@ -17,9 +17,9 @@
 import { ConflictError, NotFoundError } from '@backstage/errors';
 import type { Collector } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { z } from 'zod';
-import { CollectorRegistry } from './CollectorRegistry';
+import { CollectorRegistryStore } from './CollectorRegistry';
 
-describe('CollectorRegistry', () => {
+describe('CollectorRegistryStore', () => {
   const collector: Collector = {
     getCollectorId: () => 'github:deployments',
     getCollectorDescription: () => 'Collect github deployments',
@@ -36,7 +36,7 @@ describe('CollectorRegistry', () => {
   };
 
   it('registers and resolves collector by id', () => {
-    const registry = new CollectorRegistry();
+    const registry = new CollectorRegistryStore();
     registry.register(collector);
 
     expect(registry.hasCollector(collector.getCollectorId())).toBe(true);
@@ -44,7 +44,7 @@ describe('CollectorRegistry', () => {
   });
 
   it('throws on duplicate collector id', () => {
-    const registry = new CollectorRegistry();
+    const registry = new CollectorRegistryStore();
     registry.register(collector);
 
     expect(() => registry.register(collector)).toThrow(
@@ -55,7 +55,7 @@ describe('CollectorRegistry', () => {
   });
 
   it('throws on missing collector', () => {
-    const registry = new CollectorRegistry();
+    const registry = new CollectorRegistryStore();
     expect(() => registry.getCollector('missing.collector')).toThrow(
       new NotFoundError(
         "No collector registered for collector ID 'missing.collector'.",

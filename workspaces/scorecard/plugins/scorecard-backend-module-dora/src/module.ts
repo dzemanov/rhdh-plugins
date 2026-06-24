@@ -18,7 +18,7 @@ import {
   createBackendModule,
 } from '@backstage/backend-plugin-api';
 import {
-  scorecardCollectorsExtensionPoint,
+  scorecardCollectorRegistryServiceRef,
   scorecardMetricsExtensionPoint,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { DoraDeploymentFrequencyProvider } from './metricProviders/DoraDeploymentFrequencyProvider';
@@ -30,17 +30,17 @@ export const scorecardModuleDora = createBackendModule({
   register(reg) {
     reg.registerInit({
       deps: {
-        collectors: scorecardCollectorsExtensionPoint,
+        collectorRegistry: scorecardCollectorRegistryServiceRef,
         config: coreServices.rootConfig,
         metrics: scorecardMetricsExtensionPoint,
       },
-      async init({ collectors, config, metrics }) {
+      async init({ collectorRegistry, config, metrics }) {
         metrics.addMetricProvider(
           DoraDeploymentFrequencyProvider.fromConfig(config, {
-            collectorRegistry: collectors,
+            collectorRegistry,
           }),
           DoraLeadTimeForChangesProvider.fromConfig(config, {
-            collectorRegistry: collectors,
+            collectorRegistry,
           }),
         );
       },

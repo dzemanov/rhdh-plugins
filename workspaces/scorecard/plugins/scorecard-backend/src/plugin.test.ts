@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { scorecardPlugin } from './plugin';
+import { CollectorRegistryStore } from './providers/CollectorRegistry';
+import { createScorecardPlugin } from './plugin';
 
 describe('plugin', () => {
   it('should export plugin', () => {
-    expect(scorecardPlugin).toBeDefined();
+    const plugin = createScorecardPlugin({
+      collectorRegistryStore: new CollectorRegistryStore(),
+    });
+    expect(plugin).toBeDefined();
   });
 });

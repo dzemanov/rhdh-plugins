@@ -17,6 +17,7 @@ Collector APIs are provided by `@red-hat-developer-hub/backstage-plugin-scorecar
 - `CollectorContract`
 - `collectWithContract`
 - `scorecardCollectorsExtensionPoint`
+- `scorecardCollectorRegistryServiceRef`
 
 ## Collector ID convention
 
@@ -108,6 +109,33 @@ export const scorecardModuleMySource = createBackendModule({
 ```
 
 ## Use collectors from a metric provider
+
+Inject `scorecardCollectorRegistryServiceRef` and pass it to the provider:
+
+```ts
+import { createBackendModule } from '@backstage/backend-plugin-api';
+import {
+  scorecardCollectorRegistryServiceRef,
+  scorecardMetricsExtensionPoint,
+} from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import { MyMetricProvider } from './metricProviders/MyMetricProvider';
+
+export const scorecardModuleMySource = createBackendModule({
+  pluginId: 'scorecard',
+  moduleId: 'my-source',
+  register(reg) {
+    reg.registerInit({
+      deps: {
+        collectorRegistry: scorecardCollectorRegistryServiceRef,
+        metrics: scorecardMetricsExtensionPoint,
+      },
+      async init({ collectorRegistry, metrics }) {
+        metrics.addMetricProvider(new MyMetricProvider(collectorRegistry));
+      },
+    });
+  },
+});
+```
 
 Use `collectWithContract` to validate both sides of the contract (provider and collector expected input and output):
 

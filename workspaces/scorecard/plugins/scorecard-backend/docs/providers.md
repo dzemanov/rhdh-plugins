@@ -5,11 +5,12 @@ The Scorecard plugin collects metrics from third-party data sources using metric
 For provider data-fetching reuse across datasources, Scorecard provides collector contracts:
 
 - `scorecardCollectorsExtensionPoint` to register collectors
+- `scorecardCollectorRegistryServiceRef` to resolve collectors from metric providers
 - `collectWithContract(...)` helper to call a collector with dual validation:
   - provider expected input/output schemas
   - collector declared input/output schemas
 
-For details and examples, see [collectors.md](./docs/collectors.md).
+For details and examples, see [collectors.md](./collectors.md).
 
 ## Getting started
 

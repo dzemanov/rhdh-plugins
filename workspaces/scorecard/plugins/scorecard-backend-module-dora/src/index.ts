@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createBackendFeatureLoader } from '@backstage/backend-plugin-api';
-import { CollectorRegistryStore } from './providers/CollectorRegistry';
-import { createScorecardPlugin } from './plugin';
-import { createCollectorRegistryServiceFactory } from './services/CollectorRegistryService';
 
-export default createBackendFeatureLoader({
-  *loader() {
-    const collectorRegistry = new CollectorRegistryStore();
-    yield createScorecardPlugin({ collectorRegistryStore: collectorRegistry });
-    yield createCollectorRegistryServiceFactory(collectorRegistry);
-  },
-});
+/**
+ * The dora backend module for the scorecard plugin.
+ *
+ * @packageDocumentation
+ */
+
+export { scorecardModuleDora as default } from './module';

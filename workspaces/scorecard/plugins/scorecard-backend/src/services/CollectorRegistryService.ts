@@ -13,15 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createBackendFeatureLoader } from '@backstage/backend-plugin-api';
-import { CollectorRegistryStore } from './providers/CollectorRegistry';
-import { createScorecardPlugin } from './plugin';
-import { createCollectorRegistryServiceFactory } from './services/CollectorRegistryService';
 
-export default createBackendFeatureLoader({
-  *loader() {
-    const collectorRegistry = new CollectorRegistryStore();
-    yield createScorecardPlugin({ collectorRegistryStore: collectorRegistry });
-    yield createCollectorRegistryServiceFactory(collectorRegistry);
-  },
-});
+import { createServiceFactory } from '@backstage/backend-plugin-api';
+import {
+  type CollectorRegistry,
+  scorecardCollectorRegistryServiceRef,
+} from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+
+/**
+ * Service factory for the collector registry used by metric providers.
+ *
+ * @public
+ */
+export function createCollectorRegistryServiceFactory(
+  collectorRegistry: CollectorRegistry,
+) {
+  return createServiceFactory({
+    service: scorecardCollectorRegistryServiceRef,
+    deps: {},
+    factory: async () => collectorRegistry,
+  });
+}

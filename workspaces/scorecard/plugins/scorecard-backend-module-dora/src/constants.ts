@@ -13,15 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createBackendFeatureLoader } from '@backstage/backend-plugin-api';
-import { CollectorRegistryStore } from './providers/CollectorRegistry';
-import { createScorecardPlugin } from './plugin';
-import { createCollectorRegistryServiceFactory } from './services/CollectorRegistryService';
 
-export default createBackendFeatureLoader({
-  *loader() {
-    const collectorRegistry = new CollectorRegistryStore();
-    yield createScorecardPlugin({ collectorRegistryStore: collectorRegistry });
-    yield createCollectorRegistryServiceFactory(collectorRegistry);
-  },
-});
+export const DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID = 'github:deployments';
+export const DORA_DEFAULT_COMMIT_CHANGE_REQUESTS_COLLECTOR_ID =
+  'github:commit-pull-requests';
+export const DORA_TIME_WINDOW_DAYS = 7;

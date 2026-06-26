@@ -16,20 +16,23 @@
 
 import { ConfigReader } from '@backstage/config';
 import { GithubClient } from '../github/GithubClient';
-import { GithubCommitPullRequestsCollector } from './GithubCommitPullRequestsCollector';
+import { GithubDeploymentWorkflowRunsCollector } from './GithubDeploymentWorkflowRunsCollector';
 
-describe('GithubCommitPullRequestsCollector', () => {
-  it('collects pull requests for commit sha', async () => {
-    const getCommitPullRequestsSpy = jest
-      .spyOn(GithubClient.prototype, 'getCommitPullRequests')
+describe('GithubDeploymentWorkflowRunsCollector', () => {
+  it('collects deployments from workflow runs', async () => {
+    const getWorkflowRunsSpy = jest
+      .spyOn(GithubClient.prototype, 'getWorkflowRuns')
       .mockResolvedValue([
         {
-          number: 100,
-          mergedAt: '2026-06-01T12:00:00.000Z',
+          id: 1,
+          sha: 'sha-one',
+          createdAt: '2026-06-02T00:00:00.000Z',
+          status: 'completed',
+          conclusion: 'success',
         },
       ]);
 
-    const collector = GithubCommitPullRequestsCollector.fromConfig(
+    const collector = GithubDeploymentWorkflowRunsCollector.fromConfig(
       new ConfigReader({
         integrations: {
           github: [
@@ -55,18 +58,22 @@ describe('GithubCommitPullRequestsCollector', () => {
         },
       },
       input: {
-        sha: 'sha-one',
+        workflowName: 'deployment.yml',
+        from: '2026-06-01T00:00:00.000Z',
+        to: '2026-06-08T00:00:00.000Z',
       },
     });
 
     expect(result).toEqual({
-      pullRequests: [
+      deployments: [
         {
-          number: 100,
-          mergedAt: '2026-06-01T12:00:00.000Z',
+          id: '1',
+          commitSha: 'sha-one',
+          createdAt: '2026-06-02T00:00:00.000Z',
+          result: 'success',
         },
       ],
     });
-    expect(getCommitPullRequestsSpy).toHaveBeenCalledTimes(1);
+    expect(getWorkflowRunsSpy).toHaveBeenCalledTimes(1);
   });
 });

@@ -19,9 +19,11 @@ import {
   DefaultGithubCredentialsProvider,
   ScmIntegrations,
 } from '@backstage/integration';
+import { Octokit } from '@octokit/rest';
 import {
-  GithubPullRequest,
   GithubDeployment,
+  GithubWorkflowRun,
+  GithubPullRequest,
   GithubRepository,
   GithubDeploymentsQueryResponse,
   GithubCommitPullRequestsQueryResponse,
@@ -50,6 +52,22 @@ export class GithubClient {
     const { graphql } = await import('@octokit/graphql');
     return graphql.defaults({
       headers,
+      baseUrl: githubIntegration.config.apiBaseUrl,
+    });
+  }
+
+  private async getOctokitRestClient(url: string): Promise<Octokit> {
+    const githubIntegration = this.integrations.github.byUrl(url);
+    if (!githubIntegration) {
+      throw new Error(`Missing GitHub integration for '${url}'`);
+    }
+
+    const { token } = await this.credentialsProvider.getCredentials({
+      url,
+    });
+
+    return new Octokit({
+      auth: token,
       baseUrl: githubIntegration.config.apiBaseUrl,
     });
   }
@@ -155,8 +173,8 @@ export class GithubClient {
             id: deployment.databaseId,
             sha: deployment.commitOid,
             createdAt: deployment.createdAt,
-            environment: deployment.environment ?? 'unknown',
-            status: deployment.latestStatus?.state ?? 'unknown',
+            environment: deployment.environment ?? null,
+            status: deployment.latestStatus?.state ?? null,
           });
         }
       }
@@ -209,5 +227,55 @@ export class GithubClient {
       number: pr.number,
       mergedAt: pr.mergedAt ?? null,
     }));
+  }
+
+  async getWorkflowRuns(
+    url: string,
+    repository: GithubRepository,
+    workflowName: string,
+    from: Date,
+    to: Date,
+  ): Promise<GithubWorkflowRun[]> {
+    const octokit = await this.getOctokitRestClient(url);
+
+    const workflows = await octokit.paginate(
+      octokit.actions.listRepoWorkflows,
+      { owner: repository.owner, repo: repository.repo, per_page: 100 },
+      response => response.data,
+    );
+
+    const workflow = workflows.find(
+      item =>
+        item.name === workflowName ||
+        item.path === workflowName ||
+        item.path.endsWith(`/${workflowName}`),
+    );
+
+    if (!workflow) {
+      throw new Error(
+        `Workflow '${workflowName}' was not found in '${repository.owner}/${repository.repo}'`,
+      );
+    }
+
+    const workflowRuns = await octokit.paginate(
+      octokit.actions.listWorkflowRuns,
+      {
+        owner: repository.owner,
+        repo: repository.repo,
+        workflow_id: workflow.id,
+        created: `${from.toISOString()}..${to.toISOString()}`,
+        per_page: 100,
+      },
+      response =>
+        response.data.map(run => ({
+          id: run.id,
+          sha: run.head_sha,
+          createdAt: run.created_at,
+          status: run.status ?? null,
+          conclusion: run.conclusion ?? null,
+        })),
+    );
+
+    return workflowRuns;
   }
 }

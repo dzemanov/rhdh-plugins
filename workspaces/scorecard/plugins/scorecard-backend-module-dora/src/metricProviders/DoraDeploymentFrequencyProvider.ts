@@ -25,15 +25,20 @@ import {
   type CollectorRegistry,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import { z } from 'zod';
 import {
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
   DORA_TIME_WINDOW_DAYS,
 } from '../constants';
+import {
+  type DeploymentsCollectorOutput,
+  deploymentsCollectorInputSchema,
+  deploymentsCollectorOutputSchema,
+} from './schemas/deploymentSchemas';
 
 type DoraDeploymentFrequencyProviderOptions = {
   collectorRegistry: CollectorRegistry;
   deploymentsCollectorId: string;
+  deploymentsCollectorInput: Record<string, unknown>;
 };
 
 export class DoraDeploymentFrequencyProvider
@@ -41,10 +46,12 @@ export class DoraDeploymentFrequencyProvider
 {
   private readonly collectorRegistry: CollectorRegistry;
   private readonly deploymentsCollectorId: string;
+  private readonly deploymentsCollectorInput: Record<string, unknown>;
 
   private constructor(options: DoraDeploymentFrequencyProviderOptions) {
     this.collectorRegistry = options.collectorRegistry;
     this.deploymentsCollectorId = options.deploymentsCollectorId;
+    this.deploymentsCollectorInput = options.deploymentsCollectorInput;
   }
 
   static fromConfig(
@@ -59,6 +66,10 @@ export class DoraDeploymentFrequencyProvider
         config.getOptionalString(
           'scorecard.plugins.dora.deployment_frequency.collectors.deployments.id',
         ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+      deploymentsCollectorInput:
+        config.getOptional<Record<string, unknown>>(
+          'scorecard.plugins.dora.deployment_frequency.collectors.deployments.input',
+        ) ?? {},
     });
   }
 
@@ -104,29 +115,19 @@ export class DoraDeploymentFrequencyProvider
       collectorRegistry: this.collectorRegistry,
       collectorId: this.deploymentsCollectorId,
       contract: {
-        inputSchema: z.object({
-          from: z.string().datetime(),
-          to: z.string().datetime(),
-        }),
-        outputSchema: z.object({
-          deployments: z.array(
-            z.object({
-              id: z.number(),
-              sha: z.string(),
-              createdAt: z.string(),
-              status: z.string().optional(),
-            }),
-          ),
-        }),
+        inputSchema: deploymentsCollectorInputSchema,
+        outputSchema: deploymentsCollectorOutputSchema,
       },
       entity,
       input: {
+        ...this.deploymentsCollectorInput,
         from: from.toISOString(),
         to: to.toISOString(),
       },
     });
 
-    const deployments = deploymentsCollected.deployments;
+    const deployments = (deploymentsCollected as DeploymentsCollectorOutput)
+      .deployments;
 
     console.log('from', from);
     console.log('to', to);
@@ -137,8 +138,7 @@ export class DoraDeploymentFrequencyProvider
     }
 
     const successfulDeployments = deployments.filter(
-      deployment =>
-        !deployment.status || deployment.status.toLowerCase() === 'success',
+      deployment => deployment.result === 'success',
     );
 
     return Number(

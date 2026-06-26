@@ -14,7 +14,28 @@
  * limitations under the License.
  */
 
-export const DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID = 'github:deployments';
-export const DORA_DEFAULT_PULL_REQUESTS_COLLECTOR_ID =
-  'github:deployment-pull-requests';
-export const DORA_TIME_WINDOW_DAYS = 7;
+import { z } from 'zod';
+
+export const pullRequestsCollectorInputSchema = z
+  .object({
+    commitSha: z.string().min(1),
+  })
+  .passthrough();
+
+const pullRequestSchema = z
+  .object({
+    id: z.string(),
+    mergedAt: z.string(),
+  })
+  .passthrough();
+export type PullRequest = z.infer<typeof pullRequestSchema>;
+
+export const pullRequestsCollectorOutputSchema = z
+  .object({
+    pullRequests: z.array(pullRequestSchema),
+  })
+  .passthrough();
+
+export type PullRequestsCollectorOutput = {
+  pullRequests: PullRequest[];
+};

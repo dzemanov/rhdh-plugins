@@ -20,7 +20,7 @@ import { z } from 'zod';
 import { DoraLeadTimeForChangesProvider } from './DoraLeadTimeForChangesProvider';
 
 describe('DoraLeadTimeForChangesProvider', () => {
-  it('should calculate average lead time from deployments and pull request collectors', async () => {
+  it('should calculate average lead time from deployments and pull requests collectors', async () => {
     const deploymentsCollector: Collector = {
       getCollectorId: () => 'github:deployments',
       getCollectorDescription: () => 'mock deployments collector',
@@ -33,34 +33,38 @@ describe('DoraLeadTimeForChangesProvider', () => {
         z.object({
           deployments: z.array(
             z.object({
-              id: z.number(),
-              sha: z.string(),
+              id: z.string(),
+              commitSha: z.string(),
+              environment: z.string(),
               createdAt: z.string(),
+              result: z.enum(['success', 'failure', '']),
             }),
           ),
         }),
       collect: jest.fn(async () => ({
         deployments: [
           {
-            id: 100,
-            sha: 'sha-one',
+            id: '100',
+            commitSha: 'sha-one',
+            environment: 'production',
             createdAt: '2026-06-06T12:00:00.000Z',
+            result: 'success',
           },
         ],
       })),
     };
     const pullRequestsCollector: Collector = {
-      getCollectorId: () => 'github:commit-pull-requests',
+      getCollectorId: () => 'github:deployment-pull-requests',
       getCollectorDescription: () => 'mock pull requests collector',
       getInputSchema: () =>
         z.object({
-          sha: z.string().min(1),
+          commitSha: z.string().min(1),
         }),
       getOutputSchema: () =>
         z.object({
           pullRequests: z.array(
             z.object({
-              number: z.number(),
+              id: z.string(),
               mergedAt: z.string().nullable(),
             }),
           ),
@@ -68,7 +72,7 @@ describe('DoraLeadTimeForChangesProvider', () => {
       collect: jest.fn(async () => ({
         pullRequests: [
           {
-            number: 123,
+            id: '123',
             mergedAt: '2026-06-05T12:00:00.000Z',
           },
         ],
@@ -76,14 +80,35 @@ describe('DoraLeadTimeForChangesProvider', () => {
     };
 
     const provider = DoraLeadTimeForChangesProvider.fromConfig(
-      new ConfigReader({}),
+      new ConfigReader({
+        scorecard: {
+          plugins: {
+            dora: {
+              lead_time_for_changes: {
+                collectors: {
+                  deployments: {
+                    input: {
+                      workflowName: 'Deploy',
+                    },
+                  },
+                  pullRequests: {
+                    input: {
+                      mergeStrategy: 'squash',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
       {
         collectorRegistry: {
           getCollector: collectorId => {
             if (collectorId === 'github:deployments') {
               return deploymentsCollector;
             }
-            if (collectorId === 'github:commit-pull-requests') {
+            if (collectorId === 'github:deployment-pull-requests') {
               return pullRequestsCollector;
             }
             throw new Error(`Unexpected collector id "${collectorId}"`);
@@ -109,5 +134,20 @@ describe('DoraLeadTimeForChangesProvider', () => {
     expect(leadTime).toBe(24);
     expect(deploymentsCollector.collect).toHaveBeenCalledTimes(1);
     expect(pullRequestsCollector.collect).toHaveBeenCalledTimes(1);
+    expect(deploymentsCollector.collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          from: expect.any(String),
+          to: expect.any(String),
+        }),
+      }),
+    );
+    expect(pullRequestsCollector.collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          commitSha: 'sha-one',
+        }),
+      }),
+    );
   });
 });

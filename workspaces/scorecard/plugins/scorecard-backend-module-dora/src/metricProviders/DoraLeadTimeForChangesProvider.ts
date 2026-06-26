@@ -26,45 +26,26 @@ import {
   type CollectorRegistry,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import { z } from 'zod';
 import {
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-  DORA_DEFAULT_COMMIT_CHANGE_REQUESTS_COLLECTOR_ID,
+  DORA_DEFAULT_PULL_REQUESTS_COLLECTOR_ID,
   DORA_TIME_WINDOW_DAYS,
 } from '../constants';
-
-const leadTimeCollectorInputSchema = z.object({
-  from: z.string().datetime(),
-  to: z.string().datetime(),
-});
-
-const leadTimeCollectorOutputSchema = z.object({
-  deployments: z.array(
-    z.object({
-      id: z.number(),
-      sha: z.string(),
-      createdAt: z.string(),
-    }),
-  ),
-});
-
-const pullRequestsCollectorInputSchema = z.object({
-  sha: z.string().min(1),
-});
-
-const pullRequestsCollectorOutputSchema = z.object({
-  pullRequests: z.array(
-    z.object({
-      number: z.number(),
-      mergedAt: z.string().nullable(),
-    }),
-  ),
-});
+import {
+  pullRequestsCollectorInputSchema,
+  pullRequestsCollectorOutputSchema,
+} from './schemas/pullRequestSchemas';
+import {
+  deploymentsCollectorInputSchema,
+  deploymentsCollectorOutputSchema,
+} from './schemas/deploymentSchemas';
 
 type DoraLeadTimeForChangesProviderOptions = {
   collectorRegistry: CollectorRegistry;
   deploymentsCollectorId: string;
   pullRequestsCollectorId: string;
+  deploymentsCollectorInput: Record<string, unknown>;
+  pullRequestsCollectorInput: Record<string, unknown>;
 };
 
 export class DoraLeadTimeForChangesProvider
@@ -73,11 +54,15 @@ export class DoraLeadTimeForChangesProvider
   private readonly collectorRegistry: CollectorRegistry;
   private readonly deploymentsCollectorId: string;
   private readonly pullRequestsCollectorId: string;
+  private readonly deploymentsCollectorInput: Record<string, unknown>;
+  private readonly pullRequestsCollectorInput: Record<string, unknown>;
 
   private constructor(options: DoraLeadTimeForChangesProviderOptions) {
     this.collectorRegistry = options.collectorRegistry;
     this.deploymentsCollectorId = options.deploymentsCollectorId;
     this.pullRequestsCollectorId = options.pullRequestsCollectorId;
+    this.deploymentsCollectorInput = options.deploymentsCollectorInput;
+    this.pullRequestsCollectorInput = options.pullRequestsCollectorInput;
   }
 
   static fromConfig(
@@ -94,8 +79,16 @@ export class DoraLeadTimeForChangesProvider
         ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
       pullRequestsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.lead_time_for_changes.collectors.commitChangeRequests.id',
-        ) ?? DORA_DEFAULT_COMMIT_CHANGE_REQUESTS_COLLECTOR_ID,
+          'scorecard.plugins.dora.lead_time_for_changes.collectors.pullRequests.id',
+        ) ?? DORA_DEFAULT_PULL_REQUESTS_COLLECTOR_ID,
+      deploymentsCollectorInput:
+        config.getOptional<Record<string, unknown>>(
+          'scorecard.plugins.dora.lead_time_for_changes.collectors.deployments.input',
+        ) ?? {},
+      pullRequestsCollectorInput:
+        config.getOptional<Record<string, unknown>>(
+          'scorecard.plugins.dora.lead_time_for_changes.collectors.pullRequests.input',
+        ) ?? {},
     });
   }
 
@@ -140,22 +133,24 @@ export class DoraLeadTimeForChangesProvider
       collectorRegistry: this.collectorRegistry,
       collectorId: this.deploymentsCollectorId,
       contract: {
-        inputSchema: leadTimeCollectorInputSchema,
-        outputSchema: leadTimeCollectorOutputSchema,
+        inputSchema: deploymentsCollectorInputSchema,
+        outputSchema: deploymentsCollectorOutputSchema,
       },
       entity,
       input: {
+        ...this.deploymentsCollectorInput,
         from: from.toISOString(),
         to: to.toISOString(),
       },
     });
+    const deployments = deploymentsCollected.deployments;
 
-    if (deploymentsCollected.deployments.length === 0) {
+    if (deployments.length === 0) {
       return 0;
     }
 
     const leadTimeHours: number[] = [];
-    for (const deployment of deploymentsCollected.deployments) {
+    for (const deployment of deployments) {
       const pullRequestsCollected = await collectWithContract({
         collectorRegistry: this.collectorRegistry,
         collectorId: this.pullRequestsCollectorId,
@@ -165,12 +160,13 @@ export class DoraLeadTimeForChangesProvider
         },
         entity,
         input: {
-          sha: deployment.sha,
+          ...this.pullRequestsCollectorInput,
+          commitSha: deployment.commitSha,
         },
       });
 
       const mergedAt = pullRequestsCollected.pullRequests.find(
-        pr => pr.mergedAt,
+        pullRequest => pullRequest.mergedAt,
       )?.mergedAt;
       if (!mergedAt) {
         continue;

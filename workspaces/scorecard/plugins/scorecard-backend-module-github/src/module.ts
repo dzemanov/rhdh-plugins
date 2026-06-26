@@ -21,7 +21,8 @@ import {
   scorecardCollectorsExtensionPoint,
   scorecardMetricsExtensionPoint,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import { GithubCommitPullRequestsCollector } from './collectors/GithubCommitPullRequestsCollector';
+import { GithubDeploymentPullRequestsCollector } from './collectors/GithubDeploymentPullRequestsCollector';
+import { GithubDeploymentWorkflowRunsCollector } from './collectors/GithubDeploymentWorkflowRunsCollector';
 import { GithubDeploymentsCollector } from './collectors/GithubDeploymentsCollector';
 import { GithubOpenPRsProvider } from './metricProviders/GithubOpenPRsProvider';
 
@@ -38,7 +39,8 @@ export const scorecardModuleGithub = createBackendModule({
       async init({ collectors, config, metrics }) {
         collectors.addCollector(
           GithubDeploymentsCollector.fromConfig(config),
-          GithubCommitPullRequestsCollector.fromConfig(config),
+          GithubDeploymentWorkflowRunsCollector.fromConfig(config),
+          GithubDeploymentPullRequestsCollector.fromConfig(config),
         );
         metrics.addMetricProvider(GithubOpenPRsProvider.fromConfig(config));
       },

@@ -1,5 +1,3 @@
-import { GraphQlQueryResponseData } from '@octokit/graphql';
-
 /*
  * Copyright Red Hat, Inc.
  *
@@ -15,6 +13,9 @@ import { GraphQlQueryResponseData } from '@octokit/graphql';
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import { GraphQlQueryResponseData } from '@octokit/graphql';
+
 export type GithubRepository = {
   owner: string;
   repo: string;
@@ -24,13 +25,21 @@ export type GithubDeployment = {
   id: number;
   sha: string;
   createdAt: string;
-  environment: string;
-  status: string;
+  environment: string | null;
+  status: string | null;
 };
 
 export type GithubPullRequest = {
   number: number;
   mergedAt: string | null;
+};
+
+export type GithubWorkflowRun = {
+  id: number;
+  sha: string;
+  createdAt: string;
+  status: string | null;
+  conclusion: string | null;
 };
 
 export type GithubDeploymentsQueryResponse = GraphQlQueryResponseData & {

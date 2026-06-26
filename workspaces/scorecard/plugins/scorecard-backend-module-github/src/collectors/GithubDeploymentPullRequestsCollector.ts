@@ -22,20 +22,20 @@ import { z } from 'zod';
 import { GithubClient } from '../github/GithubClient';
 import { getRepositoryInformationFromEntity } from '../github/utils';
 
-export class GithubCommitPullRequestsCollector
+export class GithubDeploymentPullRequestsCollector
   implements
     Collector<
-      (typeof GithubCommitPullRequestsCollector)['inputSchema'],
-      (typeof GithubCommitPullRequestsCollector)['outputSchema']
+      (typeof GithubDeploymentPullRequestsCollector)['inputSchema'],
+      (typeof GithubDeploymentPullRequestsCollector)['outputSchema']
     >
 {
   static readonly inputSchema = z.object({
-    sha: z.string().min(1),
+    commitSha: z.string().min(1),
   });
   static readonly outputSchema = z.object({
     pullRequests: z.array(
       z.object({
-        number: z.number(),
+        id: z.string(),
         mergedAt: z.string().nullable(),
       }),
     ),
@@ -47,31 +47,33 @@ export class GithubCommitPullRequestsCollector
     this.client = new GithubClient(config);
   }
 
-  static fromConfig(config: Config): GithubCommitPullRequestsCollector {
-    return new GithubCommitPullRequestsCollector(config);
+  static fromConfig(config: Config): GithubDeploymentPullRequestsCollector {
+    return new GithubDeploymentPullRequestsCollector(config);
   }
 
   getCollectorId(): string {
-    return 'github:commit-pull-requests';
+    return 'github:deployment-pull-requests';
   }
 
   getCollectorDescription(): string {
-    return 'Collect GitHub pull requests linked to a commit SHA';
+    return 'Collect GitHub pull requests linked to a deployment commit SHA';
   }
 
   getInputSchema() {
-    return GithubCommitPullRequestsCollector.inputSchema;
+    return GithubDeploymentPullRequestsCollector.inputSchema;
   }
 
   getOutputSchema() {
-    return GithubCommitPullRequestsCollector.outputSchema;
+    return GithubDeploymentPullRequestsCollector.outputSchema;
   }
 
   async collect(options: {
     entity: Entity;
-    input: z.infer<(typeof GithubCommitPullRequestsCollector)['inputSchema']>;
+    input: z.infer<
+      (typeof GithubDeploymentPullRequestsCollector)['inputSchema']
+    >;
   }): Promise<
-    z.infer<(typeof GithubCommitPullRequestsCollector)['outputSchema']>
+    z.infer<(typeof GithubDeploymentPullRequestsCollector)['outputSchema']>
   > {
     const repository = getRepositoryInformationFromEntity(options.entity);
     const { target } = getEntitySourceLocation(options.entity);
@@ -79,11 +81,14 @@ export class GithubCommitPullRequestsCollector
     const pullRequests = await this.client.getCommitPullRequests(
       target,
       repository,
-      options.input.sha,
+      options.input.commitSha,
     );
 
     return {
-      pullRequests,
+      pullRequests: pullRequests.map(pullRequest => ({
+        id: String(pullRequest.number),
+        mergedAt: pullRequest.mergedAt,
+      })),
     };
   }
 }

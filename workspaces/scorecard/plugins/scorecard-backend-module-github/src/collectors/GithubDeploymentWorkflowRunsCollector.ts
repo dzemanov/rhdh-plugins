@@ -26,14 +26,15 @@ import {
   deploymentsSchema,
 } from './schemas/deploymentsSchemas';
 
-export class GithubDeploymentsCollector
+export class GithubDeploymentWorkflowRunsCollector
   implements
     Collector<
-      (typeof GithubDeploymentsCollector)['inputSchema'],
-      (typeof GithubDeploymentsCollector)['outputSchema']
+      (typeof GithubDeploymentWorkflowRunsCollector)['inputSchema'],
+      (typeof GithubDeploymentWorkflowRunsCollector)['outputSchema']
     >
 {
   static readonly inputSchema = z.object({
+    workflowName: z.string().min(1),
     from: z.string().datetime(),
     to: z.string().datetime(),
   });
@@ -45,64 +46,76 @@ export class GithubDeploymentsCollector
     this.client = new GithubClient(config);
   }
 
-  static fromConfig(config: Config): GithubDeploymentsCollector {
-    return new GithubDeploymentsCollector(config);
+  static fromConfig(config: Config): GithubDeploymentWorkflowRunsCollector {
+    return new GithubDeploymentWorkflowRunsCollector(config);
   }
 
   getCollectorId(): string {
-    return 'github:deployments';
+    return 'github:deployment-workflow-runs';
   }
 
   getCollectorDescription(): string {
-    return 'Collect GitHub deployments in a time window';
+    return 'Collect deployment workflow runs in a time window';
   }
 
   getInputSchema() {
-    return GithubDeploymentsCollector.inputSchema;
+    return GithubDeploymentWorkflowRunsCollector.inputSchema;
   }
 
   getOutputSchema() {
-    return GithubDeploymentsCollector.outputSchema;
+    return GithubDeploymentWorkflowRunsCollector.outputSchema;
   }
 
   async collect(options: {
     entity: Entity;
-    input: z.infer<(typeof GithubDeploymentsCollector)['inputSchema']>;
-  }): Promise<z.infer<(typeof GithubDeploymentsCollector)['outputSchema']>> {
+    input: z.infer<
+      (typeof GithubDeploymentWorkflowRunsCollector)['inputSchema']
+    >;
+  }): Promise<
+    z.infer<(typeof GithubDeploymentWorkflowRunsCollector)['outputSchema']>
+  > {
     const repository = getRepositoryInformationFromEntity(options.entity);
     const { target } = getEntitySourceLocation(options.entity);
     const from = new Date(options.input.from);
     const to = new Date(options.input.to);
 
-    const deployments = await this.client.getDeployments(
+    const workflowRuns = await this.client.getWorkflowRuns(
       target,
       repository,
+      options.input.workflowName,
       from,
       to,
     );
 
     return {
-      deployments: deployments.map(deployment => ({
-        id: String(deployment.id),
-        commitSha: deployment.sha,
-        environment: deployment.environment ?? undefined,
-        createdAt: deployment.createdAt,
-        result: mapResultFromGithubStatus(deployment.status),
+      deployments: workflowRuns.map(workflowRun => ({
+        id: String(workflowRun.id),
+        commitSha: workflowRun.sha,
+        createdAt: workflowRun.createdAt,
+        result: mapResultFromGithubConclusion(workflowRun.conclusion),
       })),
     };
   }
 }
 
-function mapResultFromGithubStatus(status: string | null): DeploymentResult {
-  if (!status) {
+function mapResultFromGithubConclusion(
+  conclusion: string | null,
+): DeploymentResult {
+  if (!conclusion) {
     return '';
   }
-  const normalizedStatus = status.toLowerCase();
-  if (normalizedStatus === 'success') {
+
+  const normalizedConclusion = conclusion.toLowerCase();
+  if (normalizedConclusion === 'success') {
     return 'success';
   }
-  if (['failure', 'error'].includes(normalizedStatus)) {
+  if (
+    ['failure', 'cancelled', 'timed_out', 'action_required'].includes(
+      normalizedConclusion,
+    )
+  ) {
     return 'failure';
   }
+
   return '';
 }

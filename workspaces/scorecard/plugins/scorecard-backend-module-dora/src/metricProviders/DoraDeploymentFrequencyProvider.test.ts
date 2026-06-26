@@ -33,8 +33,20 @@ describe('DoraDeploymentFrequencyProvider', () => {
   const createDeploymentsCollector = (
     collectorId = '',
     deployments = [
-      { id: 0, sha: '', createdAt: '' },
-      { id: 0, sha: '', createdAt: '', status: '' },
+      {
+        id: '0',
+        commitSha: '',
+        environment: 'unknown',
+        createdAt: '',
+        result: '',
+      },
+      {
+        id: '1',
+        commitSha: '',
+        environment: 'unknown',
+        createdAt: '',
+        result: '',
+      },
     ],
   ) => ({
     getCollectorId: () => collectorId,
@@ -48,10 +60,11 @@ describe('DoraDeploymentFrequencyProvider', () => {
       z.object({
         deployments: z.array(
           z.object({
-            id: z.number(),
-            sha: z.string(),
+            id: z.string(),
+            commitSha: z.string(),
+            environment: z.string(),
             createdAt: z.string(),
-            status: z.string().optional(),
+            result: z.enum(['success', 'failure', '']),
           }),
         ),
       }),
@@ -64,27 +77,32 @@ describe('DoraDeploymentFrequencyProvider', () => {
     const customCollectorId = 'custom:deployments';
     const deploymentsCollector = createDeploymentsCollector(customCollectorId, [
       {
-        id: 100,
-        sha: 'sha-1',
+        id: '100',
+        commitSha: 'sha-1',
+        environment: 'production',
         createdAt: '2026-06-01T10:00:00.000Z',
-        status: 'SUCCESS',
+        result: 'success',
       },
       {
-        id: 101,
-        sha: 'sha-2',
+        id: '101',
+        commitSha: 'sha-2',
+        environment: 'production',
         createdAt: '2026-06-02T10:00:00.000Z',
-        status: 'success',
+        result: 'success',
       },
       {
-        id: 102,
-        sha: 'sha-3',
+        id: '102',
+        commitSha: 'sha-3',
+        environment: 'production',
         createdAt: '2026-06-03T10:00:00.000Z',
-        status: 'failure',
+        result: 'failure',
       },
       {
-        id: 103,
-        sha: 'sha-4',
+        id: '103',
+        commitSha: 'sha-4',
+        environment: 'production',
         createdAt: '2026-06-04T10:00:00.000Z',
+        result: '',
       },
     ]);
 
@@ -104,6 +122,9 @@ describe('DoraDeploymentFrequencyProvider', () => {
                 collectors: {
                   deployments: {
                     id: customCollectorId,
+                    input: {
+                      workflowName: 'Deploy',
+                    },
                   },
                 },
               },
@@ -121,9 +142,17 @@ describe('DoraDeploymentFrequencyProvider', () => {
 
     const frequency = await provider.calculateMetric(entity);
 
-    expect(frequency).toBe(0.4286);
+    expect(frequency).toBe(0.2857);
     expect(getCollector).toHaveBeenCalledWith(customCollectorId);
     expect(deploymentsCollector.collect).toHaveBeenCalledTimes(1);
+    expect(deploymentsCollector.collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({
+          from: expect.any(String),
+          to: expect.any(String),
+        }),
+      }),
+    );
   });
 
   it('uses default deployments collector id when config is not set', async () => {
@@ -132,10 +161,11 @@ describe('DoraDeploymentFrequencyProvider', () => {
       defaultCollectorId,
       [
         {
-          id: 200,
-          sha: 'sha-default',
+          id: '200',
+          commitSha: 'sha-default',
+          environment: 'production',
           createdAt: '2026-06-05T10:00:00.000Z',
-          status: 'success',
+          result: 'success',
         },
       ],
     );

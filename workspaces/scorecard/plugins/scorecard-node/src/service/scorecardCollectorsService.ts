@@ -28,7 +28,7 @@ import { DefaultScorecardCollectorsService } from './DefaultScorecardCollectorsS
  * @public
  */
 export interface ScorecardCollectorsService {
-  registerCollector(...collectors: Array<Collector>): void;
+  init(options: { collectors: Array<Collector> }): void;
   hasCollector(collectorId: string): boolean;
   collect<
     TInputSchema extends z.ZodTypeAny,

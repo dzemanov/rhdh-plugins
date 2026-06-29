@@ -23,22 +23,31 @@ import type { ScorecardCollectorsService } from './scorecardCollectorsService';
 export class DefaultScorecardCollectorsService
   implements ScorecardCollectorsService
 {
-  private readonly collectors = new Map<string, Collector>();
+  private collectors: Map<string, Collector> | undefined;
 
-  registerCollector(...collectors: Collector[]): void {
-    collectors.forEach(collector => {
+  init(options: { collectors: Collector[] }): void {
+    if (this.collectors) {
+      throw new ConflictError(
+        `Scorecard collectors service is already initialized`,
+      );
+    }
+
+    const collectorsMap = new Map<string, Collector>();
+    options.collectors.forEach(collector => {
       const collectorId = collector.getCollectorId();
-      if (this.collectors.has(collectorId)) {
+      if (collectorsMap.has(collectorId)) {
         throw new ConflictError(
           `Collector with ID '${collectorId}' has already been registered`,
         );
       }
-      this.collectors.set(collectorId, collector);
+      collectorsMap.set(collectorId, collector);
     });
+
+    this.collectors = collectorsMap;
   }
 
   hasCollector(collectorId: string): boolean {
-    return this.collectors.has(collectorId);
+    return this.collectors?.has(collectorId) ?? false;
   }
 
   async collect<
@@ -50,6 +59,10 @@ export class DefaultScorecardCollectorsService
     entity: Entity;
     input: unknown;
   }): Promise<z.infer<TOutputSchema>> {
+    if (!this.collectors) {
+      throw new Error(`Scorecard collectors service has not been initialized`);
+    }
+
     const collector = this.collectors.get(options.collectorId);
     if (!collector) {
       throw new NotFoundError(

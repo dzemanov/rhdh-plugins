@@ -14,6 +14,7 @@ Collector APIs are provided by `@red-hat-developer-hub/backstage-plugin-scorecar
 
 - `Collector`
 - `CollectorContract`
+- `scorecardCollectorsExtensionPoint`
 - `ScorecardCollectorsService`
 - `scorecardCollectorsServiceRef`
 
@@ -83,11 +84,11 @@ export class MyDeploymentsCollector
 
 ## Register collectors in a backend module
 
-Register collectors through `scorecardCollectorsServiceRef`:
+Register collectors through `scorecardCollectorsExtensionPoint`:
 
 ```ts
 import { createBackendModule } from '@backstage/backend-plugin-api';
-import { scorecardCollectorsServiceRef } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import { scorecardCollectorsExtensionPoint } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { MyDeploymentsCollector } from './collectors/MyDeploymentsCollector';
 
 export const scorecardModuleMySource = createBackendModule({
@@ -96,10 +97,10 @@ export const scorecardModuleMySource = createBackendModule({
   register(reg) {
     reg.registerInit({
       deps: {
-        collectors: scorecardCollectorsServiceRef,
+        collectors: scorecardCollectorsExtensionPoint,
       },
       async init({ collectors }) {
-        collectors.registerCollector(new MyDeploymentsCollector());
+        collectors.addCollector(new MyDeploymentsCollector());
       },
     });
   },
@@ -107,6 +108,33 @@ export const scorecardModuleMySource = createBackendModule({
 ```
 
 ## Use collectors from a metric provider
+
+To read collected values, add `scorecardCollectorsServiceRef` in as a dependency for your backend module, pass it to the provider, and call `collect(...)` inside `calculateMetric`:
+
+```ts
+import { createBackendModule } from '@backstage/backend-plugin-api';
+import {
+  scorecardCollectorsServiceRef,
+  scorecardMetricsExtensionPoint,
+} from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import { MyMetricProvider } from './metricProviders/MyMetricProvider';
+
+export const scorecardModuleMySource = createBackendModule({
+  pluginId: 'scorecard',
+  moduleId: 'my-source',
+  register(reg) {
+    reg.registerInit({
+      deps: {
+        collectorsService: scorecardCollectorsServiceRef,
+        metrics: scorecardMetricsExtensionPoint,
+      },
+      async init({ collectorsService, metrics }) {
+        metrics.addMetricProvider(new MyMetricProvider(collectorsService));
+      },
+    });
+  },
+});
+```
 
 Use `collectorsService.collect(...)` to validate both sides of the contract (provider and collector expected input and output):
 

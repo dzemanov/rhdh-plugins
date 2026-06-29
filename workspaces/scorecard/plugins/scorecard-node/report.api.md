@@ -11,7 +11,6 @@ import type { JsonValue } from '@backstage/types';
 import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { MetricType } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { MetricValue } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
-import { ServiceFactory } from '@backstage/backend-plugin-api';
 import { ServiceRef } from '@backstage/backend-plugin-api';
 import { ThresholdConfig } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { ThresholdRule } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
@@ -67,7 +66,7 @@ export class DefaultScorecardCollectorsService
   // (undocumented)
   hasCollector(collectorId: string): boolean;
   // (undocumented)
-  registerCollector(...collectors: Collector[]): void;
+  init(options: { collectors: Collector[] }): void;
 }
 
 // @public
@@ -104,6 +103,15 @@ export type RangeOperator = {
 };
 
 // @public
+export interface ScorecardCollectorsExtensionPoint {
+  // (undocumented)
+  addCollector(...collectors: Array<Collector>): void;
+}
+
+// @public
+export const scorecardCollectorsExtensionPoint: ExtensionPoint<ScorecardCollectorsExtensionPoint>;
+
+// @public
 export interface ScorecardCollectorsService {
   // (undocumented)
   collect<
@@ -118,15 +126,8 @@ export interface ScorecardCollectorsService {
   // (undocumented)
   hasCollector(collectorId: string): boolean;
   // (undocumented)
-  registerCollector(...collectors: Array<Collector>): void;
+  init(options: { collectors: Array<Collector> }): void;
 }
-
-// @public
-export const scorecardCollectorsServiceFactory: ServiceFactory<
-  ScorecardCollectorsService,
-  'plugin',
-  'singleton'
->;
 
 // @public
 export const scorecardCollectorsServiceRef: ServiceRef<

@@ -83,7 +83,7 @@ describe('DoraLeadTimeForChangesProvider', () => {
     };
 
     const collectorsService = {
-      registerCollector: () => undefined,
+      init: () => undefined,
       hasCollector: () => true,
       collect: async ({ collectorId, entity: collectEntity, input }) => {
         if (collectorId === 'github:deployments') {

@@ -52,22 +52,33 @@ describe('DefaultScorecardCollectorsService', () => {
     ...overrides,
   });
 
-  describe('registerCollector', () => {
+  describe('init', () => {
     it('registers and resolves collectors by id', () => {
       const collector = makeCollector();
       const service = new DefaultScorecardCollectorsService();
 
       expect(service.hasCollector(collectorId)).toBe(false);
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
       expect(service.hasCollector(collectorId)).toBe(true);
     });
 
-    it('throws on duplicate collector id', () => {
+    it('throws on duplicate init call', () => {
       const collector = makeCollector();
       const service = new DefaultScorecardCollectorsService();
 
-      service.registerCollector(collector);
-      expect(() => service.registerCollector(collector)).toThrow(
+      service.init({ collectors: [collector] });
+      expect(() => service.init({ collectors: [] })).toThrow(
+        `Scorecard collectors service is already initialized`,
+      );
+    });
+
+    it('throws on duplicate collector ids', () => {
+      const collector = makeCollector();
+      const service = new DefaultScorecardCollectorsService();
+
+      expect(() =>
+        service.init({ collectors: [collector, collector] }),
+      ).toThrow(
         `Collector with ID '${collectorId}' has already been registered`,
       );
     });
@@ -76,6 +87,7 @@ describe('DefaultScorecardCollectorsService', () => {
   describe('collect', () => {
     it('propagates lookup errors', async () => {
       const service = new DefaultScorecardCollectorsService();
+      service.init({ collectors: [] });
 
       await expect(
         service.collect({
@@ -98,7 +110,7 @@ describe('DefaultScorecardCollectorsService', () => {
     it('collects successfully when collector and provider schemas are compatible', async () => {
       const collector = makeCollector();
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       const result = await service.collect({
         collectorId,
@@ -124,7 +136,7 @@ describe('DefaultScorecardCollectorsService', () => {
       }));
       const collector = makeCollector({ collect });
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       await service.collect({
         collectorId,
@@ -151,7 +163,7 @@ describe('DefaultScorecardCollectorsService', () => {
     it('fails when input does not satisfy contract input schema', async () => {
       const collector = makeCollector();
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       await expect(
         service.collect({
@@ -179,7 +191,7 @@ describe('DefaultScorecardCollectorsService', () => {
           }),
       });
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       await expect(
         service.collect({
@@ -213,7 +225,7 @@ describe('DefaultScorecardCollectorsService', () => {
         })),
       });
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       await expect(
         service.collect({
@@ -244,7 +256,7 @@ describe('DefaultScorecardCollectorsService', () => {
         })),
       });
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       await expect(
         service.collect({
@@ -272,7 +284,7 @@ describe('DefaultScorecardCollectorsService', () => {
           }),
       });
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       const result = await service.collect({
         collectorId,
@@ -309,7 +321,7 @@ describe('DefaultScorecardCollectorsService', () => {
         })),
       });
       const service = new DefaultScorecardCollectorsService();
-      service.registerCollector(collector);
+      service.init({ collectors: [collector] });
 
       await expect(
         service.collect({

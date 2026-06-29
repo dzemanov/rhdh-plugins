@@ -141,7 +141,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
       }),
       {
         collectorsService: {
-          registerCollector: () => undefined,
+          init: () => undefined,
           hasCollector: () => true,
           collect,
         } as ScorecardCollectorsService,
@@ -199,7 +199,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
       new ConfigReader({}),
       {
         collectorsService: {
-          registerCollector: () => undefined,
+          init: () => undefined,
           hasCollector: () => true,
           collect,
         } as ScorecardCollectorsService,
@@ -224,7 +224,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
       new ConfigReader({}),
       {
         collectorsService: {
-          registerCollector: () => undefined,
+          init: () => undefined,
           hasCollector: () => true,
           collect: async () =>
             deploymentsCollector.collect({

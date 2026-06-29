@@ -30,17 +30,17 @@ export const scorecardModuleDora = createBackendModule({
   register(reg) {
     reg.registerInit({
       deps: {
-        collectors: scorecardCollectorsServiceRef,
+        collectorsService: scorecardCollectorsServiceRef,
         config: coreServices.rootConfig,
         metrics: scorecardMetricsExtensionPoint,
       },
-      async init({ collectors, config, metrics }) {
+      async init({ collectorsService, config, metrics }) {
         metrics.addMetricProvider(
           DoraDeploymentFrequencyProvider.fromConfig(config, {
-            collectorsService: collectors,
+            collectorsService,
           }),
           DoraLeadTimeForChangesProvider.fromConfig(config, {
-            collectorsService: collectors,
+            collectorsService,
           }),
         );
       },

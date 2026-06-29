@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-/**
- * Node.js library for the scorecard plugin.
- *
- * @packageDocumentation
- */
+import { z } from 'zod';
 
-export * from './extensions';
-export * from './api';
-export * from './service';
-export * from './utils';
-export * from './errors';
+export const deploymentResultSchema = z.enum(['success', 'failure', '']);
+
+export const deploymentSchema = z.object({
+  id: z.string(),
+  commitSha: z.string(),
+  environment: z.string().optional(),
+  createdAt: z.string(),
+  result: deploymentResultSchema,
+});
+
+export type DeploymentResult = z.infer<typeof deploymentResultSchema>;
+
+export const deploymentsSchema = z.object({
+  deployments: z.array(deploymentSchema),
+});

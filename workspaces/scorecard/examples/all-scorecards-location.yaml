@@ -11,5 +11,6 @@ spec:
     - ./components/jira-scorecard-only.yaml
     - ./components/openssf-scorecard-only.yaml
     - ./components/sonarqube-scorecard-only.yaml
+    - ./components/dora-scorecard.yaml
     - ./components/all-scorecards.yaml
     - ./components/no-scorecards.yaml

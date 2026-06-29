@@ -19,6 +19,26 @@ import { DefaultGithubCredentialsProvider } from '@backstage/integration';
 import { GithubClient } from './GithubClient';
 import { GithubRepository } from './types';
 
+const mockedListRepoWorkflows = jest.fn();
+const mockedListWorkflowRuns = jest.fn();
+const mockedPaginate = jest.fn();
+
+jest.mock('@octokit/rest', () => ({
+  Octokit: jest.fn().mockImplementation(() => ({
+    actions: {
+      listRepoWorkflows: mockedListRepoWorkflows,
+      listWorkflowRuns: mockedListWorkflowRuns,
+    },
+    rest: {
+      actions: {
+        listRepoWorkflows: mockedListRepoWorkflows,
+        listWorkflowRuns: mockedListWorkflowRuns,
+      },
+    },
+    paginate: mockedPaginate,
+  })),
+}));
+
 describe('GithubClient', () => {
   let githubClient: GithubClient;
   const mockedGraphqlClient = jest.fn();
@@ -91,6 +111,195 @@ describe('GithubClient', () => {
       await expect(
         githubClient.getOpenPullRequestsCount(unknownUrl, repository),
       ).rejects.toThrow(`Missing GitHub integration for '${unknownUrl}'`);
+    });
+  });
+
+  describe('getDeployments', () => {
+    it('should return deployments filtered by date window', async () => {
+      const url = `https://github.com/owner/repo`;
+      const from = new Date('2026-05-01T00:00:00.000Z');
+      const to = new Date('2026-05-31T23:59:59.000Z');
+      mockedGraphqlClient.mockResolvedValue({
+        repository: {
+          deployments: {
+            nodes: [
+              {
+                databaseId: 101,
+                commitOid: 'sha-within-window',
+                createdAt: '2026-05-15T10:00:00.000Z',
+                environment: 'production',
+                latestStatus: { state: 'SUCCESS' },
+              },
+              {
+                databaseId: 102,
+                commitOid: 'sha-outside-window',
+                createdAt: '2026-04-01T10:00:00.000Z',
+                environment: 'production',
+                latestStatus: { state: 'FAILURE' },
+              },
+            ],
+            pageInfo: {
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      });
+
+      const deployments = await githubClient.getDeployments(
+        url,
+        repository,
+        from,
+        to,
+      );
+
+      expect(deployments).toEqual([
+        {
+          id: 101,
+          sha: 'sha-within-window',
+          createdAt: '2026-05-15T10:00:00.000Z',
+          environment: 'production',
+          status: 'SUCCESS',
+        },
+      ]);
+      expect(mockedGraphqlClient).toHaveBeenCalledTimes(1);
+      expect(mockedGraphqlClient).toHaveBeenCalledWith(
+        expect.stringContaining('query getDeployments'),
+        expect.objectContaining({
+          owner: repository.owner,
+          repo: repository.repo,
+          after: null,
+        }),
+      );
+      expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
+    });
+  });
+
+  describe('getCommitPullRequests', () => {
+    it('should return pull requests linked to a commit sha', async () => {
+      const url = `https://github.com/owner/repo`;
+      const sha = '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1';
+      mockedGraphqlClient.mockResolvedValue({
+        repository: {
+          object: {
+            associatedPullRequests: {
+              nodes: [
+                {
+                  number: 123,
+                  mergedAt: '2026-06-01T12:00:00.000Z',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      const pullRequests = await githubClient.getCommitPullRequests(
+        url,
+        repository,
+        sha,
+      );
+
+      expect(pullRequests).toEqual([
+        {
+          number: 123,
+          mergedAt: '2026-06-01T12:00:00.000Z',
+        },
+      ]);
+      expect(mockedGraphqlClient).toHaveBeenCalledTimes(1);
+      expect(mockedGraphqlClient).toHaveBeenCalledWith(
+        expect.stringContaining('query getCommitPullRequests'),
+        expect.objectContaining({
+          owner: repository.owner,
+          repo: repository.repo,
+          sha,
+        }),
+      );
+      expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
+    });
+  });
+
+  describe('getWorkflowRuns', () => {
+    it('should return workflow runs filtered by workflow name and date window', async () => {
+      const url = `https://github.com/owner/repo`;
+      const from = new Date('2026-05-01T00:00:00.000Z');
+      const to = new Date('2026-05-31T23:59:59.000Z');
+
+      mockedPaginate
+        .mockResolvedValueOnce([
+          { id: 11, name: 'Deploy', path: '.github/workflows/deploy.yml' },
+          { id: 22, name: 'CI', path: '.github/workflows/ci.yml' },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 1001,
+            sha: 'sha-one',
+            createdAt: '2026-05-10T10:00:00.000Z',
+            status: 'completed',
+            conclusion: 'success',
+          },
+          {
+            id: 1002,
+            sha: 'sha-two',
+            createdAt: '2026-05-11T10:00:00.000Z',
+            status: null,
+            conclusion: null,
+          },
+        ]);
+
+      const workflowRuns = await githubClient.getWorkflowRuns(
+        url,
+        repository,
+        'Deploy',
+        from,
+        to,
+      );
+
+      expect(workflowRuns).toEqual([
+        {
+          id: 1001,
+          sha: 'sha-one',
+          createdAt: '2026-05-10T10:00:00.000Z',
+          status: 'completed',
+          conclusion: 'success',
+        },
+        {
+          id: 1002,
+          sha: 'sha-two',
+          createdAt: '2026-05-11T10:00:00.000Z',
+          status: null,
+          conclusion: null,
+        },
+      ]);
+      expect(mockedPaginate).toHaveBeenNthCalledWith(
+        1,
+        mockedListRepoWorkflows,
+        expect.objectContaining({
+          owner: repository.owner,
+          repo: repository.repo,
+          per_page: 100,
+        }),
+        expect.any(Function),
+      );
+    });
+
+    it('should throw when workflow cannot be resolved by name', async () => {
+      const url = `https://github.com/owner/repo`;
+      mockedPaginate.mockResolvedValueOnce([
+        { id: 22, name: 'CI', path: '.github/workflows/ci.yml' },
+      ]);
+
+      await expect(
+        githubClient.getWorkflowRuns(
+          url,
+          repository,
+          'Deploy',
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-05-31T23:59:59.000Z'),
+        ),
+      ).rejects.toThrow(
+        `Workflow 'Deploy' was not found in '${repository.owner}/${repository.repo}'`,
+      );
     });
   });
 });

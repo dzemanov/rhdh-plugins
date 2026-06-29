@@ -18,7 +18,7 @@ import {
   createBackendModule,
 } from '@backstage/backend-plugin-api';
 import {
-  scorecardCollectorsExtensionPoint,
+  scorecardCollectorsServiceRef,
   scorecardMetricsExtensionPoint,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { GithubDeploymentPullRequestsCollector } from './collectors/GithubDeploymentPullRequestsCollector';
@@ -32,12 +32,12 @@ export const scorecardModuleGithub = createBackendModule({
   register(reg) {
     reg.registerInit({
       deps: {
-        collectors: scorecardCollectorsExtensionPoint,
+        collectors: scorecardCollectorsServiceRef,
         config: coreServices.rootConfig,
         metrics: scorecardMetricsExtensionPoint,
       },
       async init({ collectors, config, metrics }) {
-        collectors.addCollector(
+        collectors.registerCollector(
           GithubDeploymentsCollector.fromConfig(config),
           GithubDeploymentWorkflowRunsCollector.fromConfig(config),
           GithubDeploymentPullRequestsCollector.fromConfig(config),

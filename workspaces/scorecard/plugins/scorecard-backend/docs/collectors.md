@@ -13,10 +13,9 @@ Use collectors when:
 Collector APIs are provided by `@red-hat-developer-hub/backstage-plugin-scorecard-node`:
 
 - `Collector`
-- `CollectorRegistry`
 - `CollectorContract`
-- `collectWithContract`
-- `scorecardCollectorsExtensionPoint`
+- `ScorecardCollectorsService`
+- `scorecardCollectorsServiceRef`
 
 ## Collector ID convention
 
@@ -84,11 +83,11 @@ export class MyDeploymentsCollector
 
 ## Register collectors in a backend module
 
-Register collectors through `scorecardCollectorsExtensionPoint`:
+Register collectors through `scorecardCollectorsServiceRef`:
 
 ```ts
 import { createBackendModule } from '@backstage/backend-plugin-api';
-import { scorecardCollectorsExtensionPoint } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import { scorecardCollectorsServiceRef } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { MyDeploymentsCollector } from './collectors/MyDeploymentsCollector';
 
 export const scorecardModuleMySource = createBackendModule({
@@ -97,10 +96,10 @@ export const scorecardModuleMySource = createBackendModule({
   register(reg) {
     reg.registerInit({
       deps: {
-        collectors: scorecardCollectorsExtensionPoint,
+        collectors: scorecardCollectorsServiceRef,
       },
       async init({ collectors }) {
-        collectors.addCollector(new MyDeploymentsCollector());
+        collectors.registerCollector(new MyDeploymentsCollector());
       },
     });
   },
@@ -109,13 +108,12 @@ export const scorecardModuleMySource = createBackendModule({
 
 ## Use collectors from a metric provider
 
-Use `collectWithContract` to validate both sides of the contract (provider and collector expected input and output):
+Use `collectorsService.collect(...)` to validate both sides of the contract (provider and collector expected input and output):
 
 ```ts
 import type { Entity } from '@backstage/catalog-model';
 import {
-  collectWithContract,
-  type CollectorRegistry,
+  type ScorecardCollectorsService,
   type MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { z } from 'zod';
@@ -130,13 +128,12 @@ const outputSchema = z.object({
 });
 
 export class MyMetricProvider implements MetricProvider<'number'> {
-  constructor(private readonly collectorRegistry: CollectorRegistry) {}
+  constructor(private readonly collectorsService: ScorecardCollectorsService) {}
 
   // Other MetricProvider methods omitted
 
   async calculateMetric(entity: Entity): Promise<number> {
-    const collected = await collectWithContract({
-      collectorRegistry: this.collectorRegistry,
+    const collected = await this.collectorsService.collect({
       collectorId: 'my-source:deployments',
       contract: {
         inputSchema,

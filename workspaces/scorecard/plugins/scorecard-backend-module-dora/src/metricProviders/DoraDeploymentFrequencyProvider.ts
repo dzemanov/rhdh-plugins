@@ -21,8 +21,7 @@ import {
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
-  collectWithContract,
-  type CollectorRegistry,
+  type ScorecardCollectorsService,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import {
@@ -36,7 +35,7 @@ import {
 } from './schemas/deploymentSchemas';
 
 type DoraDeploymentFrequencyProviderOptions = {
-  collectorRegistry: CollectorRegistry;
+  collectorsService: ScorecardCollectorsService;
   deploymentsCollectorId: string;
   deploymentsCollectorInput: Record<string, unknown>;
 };
@@ -44,12 +43,12 @@ type DoraDeploymentFrequencyProviderOptions = {
 export class DoraDeploymentFrequencyProvider
   implements MetricProvider<'number'>
 {
-  private readonly collectorRegistry: CollectorRegistry;
+  private readonly collectorsService: ScorecardCollectorsService;
   private readonly deploymentsCollectorId: string;
   private readonly deploymentsCollectorInput: Record<string, unknown>;
 
   private constructor(options: DoraDeploymentFrequencyProviderOptions) {
-    this.collectorRegistry = options.collectorRegistry;
+    this.collectorsService = options.collectorsService;
     this.deploymentsCollectorId = options.deploymentsCollectorId;
     this.deploymentsCollectorInput = options.deploymentsCollectorInput;
   }
@@ -57,11 +56,11 @@ export class DoraDeploymentFrequencyProvider
   static fromConfig(
     config: Config,
     options: {
-      collectorRegistry: CollectorRegistry;
+      collectorsService: ScorecardCollectorsService;
     },
   ): DoraDeploymentFrequencyProvider {
     return new DoraDeploymentFrequencyProvider({
-      collectorRegistry: options.collectorRegistry,
+      collectorsService: options.collectorsService,
       deploymentsCollectorId:
         config.getOptionalString(
           'scorecard.plugins.dora.deployment_frequency.collectors.deployments.id',
@@ -110,8 +109,7 @@ export class DoraDeploymentFrequencyProvider
     const to = new Date();
     const from = new Date(to.getDate() - DORA_TIME_WINDOW_DAYS);
 
-    const deploymentsCollected = await collectWithContract({
-      collectorRegistry: this.collectorRegistry,
+    const deploymentsCollected = await this.collectorsService.collect({
       collectorId: this.deploymentsCollectorId,
       contract: {
         inputSchema: deploymentsCollectorInputSchema,

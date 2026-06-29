@@ -17,6 +17,7 @@
 import { ConfigReader } from '@backstage/config';
 import { z } from 'zod';
 import { DoraDeploymentFrequencyProvider } from './DoraDeploymentFrequencyProvider';
+import { ScorecardCollectorsService } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 
 describe('DoraDeploymentFrequencyProvider', () => {
   const entity = {
@@ -68,7 +69,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
           }),
         ),
       }),
-    collect: jest.fn(async () => ({
+    collect: jest.fn(async (_options: unknown) => ({
       deployments,
     })),
   });
@@ -106,11 +107,17 @@ describe('DoraDeploymentFrequencyProvider', () => {
       },
     ]);
 
-    const getCollector = jest.fn(collectorId => {
-      if (collectorId === customCollectorId) {
-        return deploymentsCollector;
+    const collect = jest.fn(async ({ collectorId }) => {
+      if (collectorId !== customCollectorId) {
+        throw new Error(`Unexpected collector id "${collectorId}"`);
       }
-      throw new Error(`Unexpected collector id "${collectorId}"`);
+      return deploymentsCollector.collect({
+        entity,
+        input: {
+          from: new Date().toISOString(),
+          to: new Date().toISOString(),
+        },
+      });
     });
 
     const provider = DoraDeploymentFrequencyProvider.fromConfig(
@@ -133,17 +140,22 @@ describe('DoraDeploymentFrequencyProvider', () => {
         },
       }),
       {
-        collectorRegistry: {
-          getCollector,
+        collectorsService: {
+          init: () => undefined,
           hasCollector: () => true,
-        },
+          collect,
+        } as ScorecardCollectorsService,
       },
     );
 
     const frequency = await provider.calculateMetric(entity);
 
     expect(frequency).toBe(0.2857);
-    expect(getCollector).toHaveBeenCalledWith(customCollectorId);
+    expect(collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectorId: customCollectorId,
+      }),
+    );
     expect(deploymentsCollector.collect).toHaveBeenCalledTimes(1);
     expect(deploymentsCollector.collect).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -170,27 +182,38 @@ describe('DoraDeploymentFrequencyProvider', () => {
       ],
     );
 
-    const getCollector = jest.fn(collectorId => {
-      if (collectorId === defaultCollectorId) {
-        return deploymentsCollector;
+    const collect = jest.fn(async ({ collectorId }) => {
+      if (collectorId !== defaultCollectorId) {
+        throw new Error(`Unexpected collector id "${collectorId}"`);
       }
-      throw new Error(`Unexpected collector id "${collectorId}"`);
+      return deploymentsCollector.collect({
+        entity,
+        input: {
+          from: new Date().toISOString(),
+          to: new Date().toISOString(),
+        },
+      });
     });
 
     const provider = DoraDeploymentFrequencyProvider.fromConfig(
       new ConfigReader({}),
       {
-        collectorRegistry: {
-          getCollector,
+        collectorsService: {
+          init: () => undefined,
           hasCollector: () => true,
-        },
+          collect,
+        } as ScorecardCollectorsService,
       },
     );
 
     const frequency = await provider.calculateMetric(entity);
 
     expect(frequency).toBe(0.1429);
-    expect(getCollector).toHaveBeenCalledWith(defaultCollectorId);
+    expect(collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectorId: defaultCollectorId,
+      }),
+    );
   });
 
   it('returns 0 when no deployments are collected', async () => {
@@ -200,10 +223,18 @@ describe('DoraDeploymentFrequencyProvider', () => {
     const provider = DoraDeploymentFrequencyProvider.fromConfig(
       new ConfigReader({}),
       {
-        collectorRegistry: {
-          getCollector: () => deploymentsCollector,
+        collectorsService: {
+          init: () => undefined,
           hasCollector: () => true,
-        },
+          collect: async () =>
+            deploymentsCollector.collect({
+              entity,
+              input: {
+                from: new Date().toISOString(),
+                to: new Date().toISOString(),
+              },
+            }),
+        } as ScorecardCollectorsService,
       },
     );
 

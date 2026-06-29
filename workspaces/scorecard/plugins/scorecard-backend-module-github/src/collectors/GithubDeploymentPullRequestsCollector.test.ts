@@ -1,0 +1,72 @@
+/*
+ * Copyright Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { ConfigReader } from '@backstage/config';
+import { GithubClient } from '../github/GithubClient';
+import { GithubDeploymentPullRequestsCollector } from './GithubDeploymentPullRequestsCollector';
+
+describe('GithubDeploymentPullRequestsCollector', () => {
+  it('collects pull requests for deployment commit sha', async () => {
+    const getCommitPullRequestsSpy = jest
+      .spyOn(GithubClient.prototype, 'getCommitPullRequests')
+      .mockResolvedValue([
+        {
+          number: 100,
+          mergedAt: '2026-06-01T12:00:00.000Z',
+        },
+      ]);
+
+    const collector = GithubDeploymentPullRequestsCollector.fromConfig(
+      new ConfigReader({
+        integrations: {
+          github: [
+            {
+              host: 'github.com',
+              token: 'dummy-token',
+            },
+          ],
+        },
+      }),
+    );
+
+    const result = await collector.collect({
+      entity: {
+        apiVersion: 'backstage.io/v1alpha1',
+        kind: 'Component',
+        metadata: {
+          name: 'service-a',
+          annotations: {
+            'github.com/project-slug': 'owner/repo',
+            'backstage.io/source-location': 'url:https://github.com/owner/repo',
+          },
+        },
+      },
+      input: {
+        commitSha: 'sha-one',
+      },
+    });
+
+    expect(result).toEqual({
+      pullRequests: [
+        {
+          id: '100',
+          mergedAt: '2026-06-01T12:00:00.000Z',
+        },
+      ],
+    });
+    expect(getCommitPullRequestsSpy).toHaveBeenCalledTimes(1);
+  });
+});

@@ -15,13 +15,9 @@
  */
 
 /**
- * Node.js library for the scorecard plugin.
+ * The dora backend module for the scorecard plugin.
  *
  * @packageDocumentation
  */
 
-export * from './extensions';
-export * from './api';
-export * from './service';
-export * from './utils';
-export * from './errors';
+export { scorecardModuleDora as default } from './module';

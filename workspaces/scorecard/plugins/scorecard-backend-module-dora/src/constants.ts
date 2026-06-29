@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-/**
- * Node.js library for the scorecard plugin.
- *
- * @packageDocumentation
- */
-
-export * from './extensions';
-export * from './api';
-export * from './service';
-export * from './utils';
-export * from './errors';
+export const DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID = 'github:deployments';
+export const DORA_DEFAULT_PULL_REQUESTS_COLLECTOR_ID =
+  'github:deployment-pull-requests';
+export const DORA_TIME_WINDOW_DAYS = 7;

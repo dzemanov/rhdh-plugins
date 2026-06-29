@@ -14,14 +14,28 @@
  * limitations under the License.
  */
 
-/**
- * Node.js library for the scorecard plugin.
- *
- * @packageDocumentation
- */
+import { z } from 'zod';
 
-export * from './extensions';
-export * from './api';
-export * from './service';
-export * from './utils';
-export * from './errors';
+export const pullRequestsCollectorInputSchema = z
+  .object({
+    commitSha: z.string().min(1),
+  })
+  .passthrough();
+
+const pullRequestSchema = z
+  .object({
+    id: z.string(),
+    mergedAt: z.string(),
+  })
+  .passthrough();
+export type PullRequest = z.infer<typeof pullRequestSchema>;
+
+export const pullRequestsCollectorOutputSchema = z
+  .object({
+    pullRequests: z.array(pullRequestSchema),
+  })
+  .passthrough();
+
+export type PullRequestsCollectorOutput = {
+  pullRequests: PullRequest[];
+};

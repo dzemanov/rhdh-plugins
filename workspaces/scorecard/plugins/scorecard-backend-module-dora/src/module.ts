@@ -18,31 +18,31 @@ import {
   createBackendModule,
 } from '@backstage/backend-plugin-api';
 import {
-  scorecardCollectorsExtensionPoint,
+  scorecardCollectorsServiceRef,
   scorecardMetricsExtensionPoint,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import { GithubDeploymentPullRequestsCollector } from './collectors/GithubDeploymentPullRequestsCollector';
-import { GithubDeploymentWorkflowRunsCollector } from './collectors/GithubDeploymentWorkflowRunsCollector';
-import { GithubDeploymentsCollector } from './collectors/GithubDeploymentsCollector';
-import { GithubOpenPRsProvider } from './metricProviders/GithubOpenPRsProvider';
+import { DoraDeploymentFrequencyProvider } from './metricProviders/DoraDeploymentFrequencyProvider';
+import { DoraLeadTimeForChangesProvider } from './metricProviders/DoraLeadTimeForChangesProvider';
 
-export const scorecardModuleGithub = createBackendModule({
+export const scorecardModuleDora = createBackendModule({
   pluginId: 'scorecard',
-  moduleId: 'github',
+  moduleId: 'dora',
   register(reg) {
     reg.registerInit({
       deps: {
-        collectors: scorecardCollectorsExtensionPoint,
+        collectorsService: scorecardCollectorsServiceRef,
         config: coreServices.rootConfig,
         metrics: scorecardMetricsExtensionPoint,
       },
-      async init({ collectors, config, metrics }) {
-        collectors.addCollector(
-          GithubDeploymentsCollector.fromConfig(config),
-          GithubDeploymentWorkflowRunsCollector.fromConfig(config),
-          GithubDeploymentPullRequestsCollector.fromConfig(config),
+      async init({ collectorsService, config, metrics }) {
+        metrics.addMetricProvider(
+          DoraDeploymentFrequencyProvider.fromConfig(config, {
+            collectorsService,
+          }),
+          DoraLeadTimeForChangesProvider.fromConfig(config, {
+            collectorsService,
+          }),
         );
-        metrics.addMetricProvider(GithubOpenPRsProvider.fromConfig(config));
       },
     });
   },

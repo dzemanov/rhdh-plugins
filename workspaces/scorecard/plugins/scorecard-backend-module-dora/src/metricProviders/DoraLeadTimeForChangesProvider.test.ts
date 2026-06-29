@@ -15,7 +15,10 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import { Collector } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import {
+  Collector,
+  ScorecardCollectorsService,
+} from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { z } from 'zod';
 import { DoraLeadTimeForChangesProvider } from './DoraLeadTimeForChangesProvider';
 
@@ -79,6 +82,26 @@ describe('DoraLeadTimeForChangesProvider', () => {
       })),
     };
 
+    const collectorsService = {
+      init: () => undefined,
+      hasCollector: () => true,
+      collect: async ({ collectorId, entity: collectEntity, input }) => {
+        if (collectorId === 'github:deployments') {
+          return deploymentsCollector.collect({
+            entity: collectEntity,
+            input: input as { from: string; to: string },
+          });
+        }
+        if (collectorId === 'github:deployment-pull-requests') {
+          return pullRequestsCollector.collect({
+            entity: collectEntity,
+            input: input as { commitSha: string },
+          });
+        }
+        throw new Error(`Unexpected collector id "${collectorId}"`);
+      },
+    } as ScorecardCollectorsService;
+
     const provider = DoraLeadTimeForChangesProvider.fromConfig(
       new ConfigReader({
         scorecard: {
@@ -103,18 +126,7 @@ describe('DoraLeadTimeForChangesProvider', () => {
         },
       }),
       {
-        collectorRegistry: {
-          getCollector: collectorId => {
-            if (collectorId === 'github:deployments') {
-              return deploymentsCollector;
-            }
-            if (collectorId === 'github:deployment-pull-requests') {
-              return pullRequestsCollector;
-            }
-            throw new Error(`Unexpected collector id "${collectorId}"`);
-          },
-          hasCollector: () => true,
-        },
+        collectorsService,
       },
     );
 

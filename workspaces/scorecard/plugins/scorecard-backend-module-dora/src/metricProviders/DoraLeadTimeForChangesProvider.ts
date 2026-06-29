@@ -22,8 +22,7 @@ import {
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
-  collectWithContract,
-  type CollectorRegistry,
+  type ScorecardCollectorsService,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import {
@@ -41,7 +40,7 @@ import {
 } from './schemas/deploymentSchemas';
 
 type DoraLeadTimeForChangesProviderOptions = {
-  collectorRegistry: CollectorRegistry;
+  collectorsService: ScorecardCollectorsService;
   deploymentsCollectorId: string;
   pullRequestsCollectorId: string;
   deploymentsCollectorInput: Record<string, unknown>;
@@ -51,14 +50,14 @@ type DoraLeadTimeForChangesProviderOptions = {
 export class DoraLeadTimeForChangesProvider
   implements MetricProvider<'number'>
 {
-  private readonly collectorRegistry: CollectorRegistry;
+  private readonly collectorsService: ScorecardCollectorsService;
   private readonly deploymentsCollectorId: string;
   private readonly pullRequestsCollectorId: string;
   private readonly deploymentsCollectorInput: Record<string, unknown>;
   private readonly pullRequestsCollectorInput: Record<string, unknown>;
 
   private constructor(options: DoraLeadTimeForChangesProviderOptions) {
-    this.collectorRegistry = options.collectorRegistry;
+    this.collectorsService = options.collectorsService;
     this.deploymentsCollectorId = options.deploymentsCollectorId;
     this.pullRequestsCollectorId = options.pullRequestsCollectorId;
     this.deploymentsCollectorInput = options.deploymentsCollectorInput;
@@ -68,11 +67,11 @@ export class DoraLeadTimeForChangesProvider
   static fromConfig(
     config: Config,
     options: {
-      collectorRegistry: CollectorRegistry;
+      collectorsService: ScorecardCollectorsService;
     },
   ): DoraLeadTimeForChangesProvider {
     return new DoraLeadTimeForChangesProvider({
-      collectorRegistry: options.collectorRegistry,
+      collectorsService: options.collectorsService,
       deploymentsCollectorId:
         config.getOptionalString(
           'scorecard.plugins.dora.lead_time_for_changes.collectors.deployments.id',
@@ -129,8 +128,7 @@ export class DoraLeadTimeForChangesProvider
     const to = new Date();
     const from = new Date(to.getDate() - DORA_TIME_WINDOW_DAYS);
 
-    const deploymentsCollected = await collectWithContract({
-      collectorRegistry: this.collectorRegistry,
+    const deploymentsCollected = await this.collectorsService.collect({
       collectorId: this.deploymentsCollectorId,
       contract: {
         inputSchema: deploymentsCollectorInputSchema,
@@ -151,8 +149,7 @@ export class DoraLeadTimeForChangesProvider
 
     const leadTimeHours: number[] = [];
     for (const deployment of deployments) {
-      const pullRequestsCollected = await collectWithContract({
-        collectorRegistry: this.collectorRegistry,
+      const pullRequestsCollected = await this.collectorsService.collect({
         collectorId: this.pullRequestsCollectorId,
         contract: {
           inputSchema: pullRequestsCollectorInputSchema,

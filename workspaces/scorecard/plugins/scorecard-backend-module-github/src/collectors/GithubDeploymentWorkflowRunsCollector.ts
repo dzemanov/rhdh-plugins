@@ -51,7 +51,7 @@ export class GithubDeploymentWorkflowRunsCollector
   }
 
   getCollectorId(): string {
-    return 'github:deployment-workflow-runs';
+    return 'github:deploymentWorkflowRuns';
   }
 
   getCollectorDescription(): string {

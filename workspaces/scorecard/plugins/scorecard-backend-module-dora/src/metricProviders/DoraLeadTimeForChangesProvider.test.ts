@@ -57,7 +57,7 @@ describe('DoraLeadTimeForChangesProvider', () => {
       })),
     };
     const pullRequestsCollector: Collector = {
-      getCollectorId: () => 'github:deployment-pull-requests',
+      getCollectorId: () => 'github:deploymentPullRequests',
       getCollectorDescription: () => 'mock pull requests collector',
       getInputSchema: () =>
         z.object({
@@ -92,7 +92,7 @@ describe('DoraLeadTimeForChangesProvider', () => {
             input: input as { from: string; to: string },
           });
         }
-        if (collectorId === 'github:deployment-pull-requests') {
+        if (collectorId === 'github:deploymentPullRequests') {
           return pullRequestsCollector.collect({
             entity: collectEntity,
             input: input as { commitSha: string },

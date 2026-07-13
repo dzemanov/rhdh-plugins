@@ -16,5 +16,5 @@
 
 export const DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID = 'github:deployments';
 export const DORA_DEFAULT_PULL_REQUESTS_COLLECTOR_ID =
-  'github:deployment-pull-requests';
+  'github:deploymentPullRequests';
 export const DORA_TIME_WINDOW_DAYS = 7;

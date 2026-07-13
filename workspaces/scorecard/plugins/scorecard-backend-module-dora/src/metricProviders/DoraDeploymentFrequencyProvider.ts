@@ -127,10 +127,6 @@ export class DoraDeploymentFrequencyProvider
     const deployments = (deploymentsCollected as DeploymentsCollectorOutput)
       .deployments;
 
-    console.log('from', from);
-    console.log('to', to);
-    console.log('*** DEPLOYMENTS', deployments);
-
     if (deployments.length === 0) {
       return 0;
     }

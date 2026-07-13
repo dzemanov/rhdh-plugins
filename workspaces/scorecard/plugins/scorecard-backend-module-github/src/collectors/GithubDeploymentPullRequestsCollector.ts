@@ -52,7 +52,7 @@ export class GithubDeploymentPullRequestsCollector
   }
 
   getCollectorId(): string {
-    return 'github:deployment-pull-requests';
+    return 'github:deploymentPullRequests';
   }
 
   getCollectorDescription(): string {

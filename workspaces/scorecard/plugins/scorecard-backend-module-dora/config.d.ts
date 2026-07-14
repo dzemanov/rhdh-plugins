@@ -17,14 +17,15 @@
 import { SchedulerServiceTaskScheduleDefinitionConfig } from '@backstage/backend-plugin-api';
 
 export interface Config {
-  /** Configuration for scorecard plugin */
+  /** Configuration for scorecard dora plugin */
   scorecard?: {
     plugins?: {
       dora?: {
         deployment_frequency?: {
           collectors?: {
             deployments?: {
-              id?: string;
+              id: string;
+              input?: { [key: string]: unknown };
             };
           };
           thresholds?: {
@@ -35,13 +36,15 @@ export interface Config {
           };
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
-        lead_time_for_changes?: {
+        median_lead_time_for_changes?: {
           collectors?: {
             deployments?: {
-              id?: string;
+              id: string;
+              input?: { [key: string]: unknown };
             };
-            commit_pull_requests?: {
-              id?: string;
+            deploymentRangePullRequests?: {
+              id: string;
+              input?: { [key: string]: unknown };
             };
           };
           thresholds?: {

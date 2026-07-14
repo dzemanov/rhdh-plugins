@@ -16,20 +16,39 @@
 
 import { ConfigReader } from '@backstage/config';
 import { GithubClient } from '../github/GithubClient';
-import { GithubDeploymentPullRequestsCollector } from './GithubDeploymentPullRequestsCollector';
+import { GithubDeploymentRangePullRequestsCollector } from './GithubDeploymentRangePullRequestsCollector';
 
-describe('GithubDeploymentPullRequestsCollector', () => {
-  it('collects pull requests for deployment commit sha', async () => {
+describe('GithubDeploymentRangePullRequestsCollector', () => {
+  it('collects pull requests for deployment commit range', async () => {
+    const getCommitShasBetweenSpy = jest
+      .spyOn(GithubClient.prototype, 'getCommitShasBetween')
+      .mockResolvedValue(['sha-two', 'sha-three']);
+
     const getCommitPullRequestsSpy = jest
       .spyOn(GithubClient.prototype, 'getCommitPullRequests')
-      .mockResolvedValue([
-        {
-          number: 100,
-          mergedAt: '2026-06-01T12:00:00.000Z',
-        },
-      ]);
+      .mockImplementation(async (_url, _repository, sha) => {
+        if (sha === 'sha-two') {
+          return [
+            {
+              number: 100,
+              mergedAt: '2026-06-01T12:00:00.000Z',
+            },
+            {
+              number: 101,
+              mergedAt: '2026-06-02T12:00:00.000Z',
+            },
+          ];
+        }
 
-    const collector = GithubDeploymentPullRequestsCollector.fromConfig(
+        return [
+          {
+            number: 101,
+            mergedAt: '2026-06-02T12:00:00.000Z',
+          },
+        ];
+      });
+
+    const collector = GithubDeploymentRangePullRequestsCollector.fromConfig(
       new ConfigReader({
         integrations: {
           github: [
@@ -55,7 +74,8 @@ describe('GithubDeploymentPullRequestsCollector', () => {
         },
       },
       input: {
-        commitSha: 'sha-one',
+        baseCommitSha: 'sha-one',
+        headCommitSha: 'sha-three',
       },
     });
 
@@ -65,8 +85,13 @@ describe('GithubDeploymentPullRequestsCollector', () => {
           id: '100',
           mergedAt: '2026-06-01T12:00:00.000Z',
         },
+        {
+          id: '101',
+          mergedAt: '2026-06-02T12:00:00.000Z',
+        },
       ],
     });
-    expect(getCommitPullRequestsSpy).toHaveBeenCalledTimes(1);
+    expect(getCommitShasBetweenSpy).toHaveBeenCalledTimes(1);
+    expect(getCommitPullRequestsSpy).toHaveBeenCalledTimes(2);
   });
 });

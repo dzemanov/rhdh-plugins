@@ -54,7 +54,7 @@ export class GithubDeploymentsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collect GitHub deployments in a time window';
+    return 'Collect GitHub deployments in a time window ASC';
   }
 
   getInputSchema() {

@@ -21,7 +21,7 @@ export const deploymentSchema = z
     id: z.string(),
     commitSha: z.string(),
     environment: z.string().optional(),
-    createdAt: z.string(),
+    createdAt: z.string().datetime(),
     result: z.enum(['success', 'failure', '']),
   })
   .passthrough();

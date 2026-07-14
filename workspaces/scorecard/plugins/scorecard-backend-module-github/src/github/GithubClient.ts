@@ -185,7 +185,27 @@ export class GithubClient {
       after = response.repository.deployments.pageInfo.endCursor;
     }
 
-    return deployments;
+    // GitHub returns DESC by createdAt so we can stop early when outside of time range;
+    // normalize to ASC for chronological processing (oldest -> newest).
+    return deployments.reverse();
+  }
+
+  async getCommitShasBetween(
+    url: string,
+    repository: GithubRepository,
+    baseSha: string,
+    headSha: string,
+  ): Promise<string[]> {
+    const octokit = await this.getOctokitRestClient(url);
+    const response = await octokit.repos.compareCommitsWithBasehead({
+      owner: repository.owner,
+      repo: repository.repo,
+      basehead: `${baseSha}...${headSha}`,
+      per_page: 100,
+    });
+    const commitShas = response.data.commits.map(commit => commit.sha);
+
+    return Array.from(new Set(commitShas));
   }
 
   async getCommitPullRequests(
@@ -276,6 +296,8 @@ export class GithubClient {
         })),
     );
 
-    return workflowRuns;
+    // GitHub returns DESC by createdAt
+    // normalize to ASC for chronological processing (oldest -> newest).
+    return workflowRuns.reverse();
   }
 }

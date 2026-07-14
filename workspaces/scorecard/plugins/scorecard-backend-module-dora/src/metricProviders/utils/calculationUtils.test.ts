@@ -14,29 +14,24 @@
  * limitations under the License.
  */
 
-import { z } from 'zod';
+import { calculateMedian } from './calculationUtils';
 
-export const rangePullRequestsCollectorInputSchema = z
-  .object({
-    baseCommitSha: z.string().min(1),
-    headCommitSha: z.string().min(1),
-  })
-  .passthrough();
+describe('calculateMedian', () => {
+  it('returns median for odd number of values', () => {
+    expect(calculateMedian([9, 3, 6])).toBe(6);
+  });
 
-const pullRequestSchema = z
-  .object({
-    id: z.string(),
-    mergedAt: z.string().datetime(),
-  })
-  .passthrough();
-export type PullRequest = z.infer<typeof pullRequestSchema>;
+  it('returns median for even number of values', () => {
+    expect(calculateMedian([10, 2, 4, 8])).toBe(6);
+  });
 
-export const rangePullRequestsCollectorOutputSchema = z
-  .object({
-    pullRequests: z.array(pullRequestSchema),
-  })
-  .passthrough();
+  it('returns the same value for single-element input', () => {
+    expect(calculateMedian([7])).toBe(7);
+  });
 
-export type PullRequestsCollectorOutput = {
-  pullRequests: PullRequest[];
-};
+  it('throws on empty values', () => {
+    expect(() => calculateMedian([])).toThrow(
+      'Unable to calculate median from empty values',
+    );
+  });
+});

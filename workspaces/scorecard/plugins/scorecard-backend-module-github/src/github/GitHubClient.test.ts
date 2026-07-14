@@ -21,6 +21,7 @@ import { GithubRepository } from './types';
 
 const mockedListRepoWorkflows = jest.fn();
 const mockedListWorkflowRuns = jest.fn();
+const mockedCompareCommitsWithBasehead = jest.fn();
 const mockedPaginate = jest.fn();
 
 jest.mock('@octokit/rest', () => ({
@@ -28,6 +29,9 @@ jest.mock('@octokit/rest', () => ({
     actions: {
       listRepoWorkflows: mockedListRepoWorkflows,
       listWorkflowRuns: mockedListWorkflowRuns,
+    },
+    repos: {
+      compareCommitsWithBasehead: mockedCompareCommitsWithBasehead,
     },
     rest: {
       actions: {
@@ -115,7 +119,7 @@ describe('GithubClient', () => {
   });
 
   describe('getDeployments', () => {
-    it('should return deployments filtered by date window', async () => {
+    it('should return deployments filtered by date window in ascending order', async () => {
       const url = `https://github.com/owner/repo`;
       const from = new Date('2026-05-01T00:00:00.000Z');
       const to = new Date('2026-05-31T23:59:59.000Z');
@@ -124,6 +128,13 @@ describe('GithubClient', () => {
           deployments: {
             nodes: [
               {
+                databaseId: 102,
+                commitOid: 'sha-within-window-newer',
+                createdAt: '2026-05-20T10:00:00.000Z',
+                environment: 'production',
+                latestStatus: { state: 'SUCCESS' },
+              },
+              {
                 databaseId: 101,
                 commitOid: 'sha-within-window',
                 createdAt: '2026-05-15T10:00:00.000Z',
@@ -131,7 +142,7 @@ describe('GithubClient', () => {
                 latestStatus: { state: 'SUCCESS' },
               },
               {
-                databaseId: 102,
+                databaseId: 100,
                 commitOid: 'sha-outside-window',
                 createdAt: '2026-04-01T10:00:00.000Z',
                 environment: 'production',
@@ -158,6 +169,13 @@ describe('GithubClient', () => {
           id: 101,
           sha: 'sha-within-window',
           createdAt: '2026-05-15T10:00:00.000Z',
+          environment: 'production',
+          status: 'SUCCESS',
+        },
+        {
+          id: 102,
+          sha: 'sha-within-window-newer',
+          createdAt: '2026-05-20T10:00:00.000Z',
           environment: 'production',
           status: 'SUCCESS',
         },
@@ -219,8 +237,41 @@ describe('GithubClient', () => {
     });
   });
 
+  describe('getCommitShasBetween', () => {
+    it('should return deduplicated commit shas in compare range', async () => {
+      const url = `https://github.com/owner/repo`;
+      mockedCompareCommitsWithBasehead.mockResolvedValue({
+        data: {
+          commits: [
+            { sha: 'sha-two' },
+            { sha: 'sha-three' },
+            { sha: 'sha-three' },
+          ],
+        },
+      });
+
+      const commitShas = await githubClient.getCommitShasBetween(
+        url,
+        repository,
+        'sha-one',
+        'sha-three',
+      );
+
+      expect(commitShas).toEqual(['sha-two', 'sha-three']);
+      expect(mockedCompareCommitsWithBasehead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner: repository.owner,
+          repo: repository.repo,
+          basehead: 'sha-one...sha-three',
+          per_page: 100,
+        }),
+      );
+      expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
+    });
+  });
+
   describe('getWorkflowRuns', () => {
-    it('should return workflow runs filtered by workflow name and date window', async () => {
+    it('should return workflow runs filtered by workflow name and date window in ascending order', async () => {
       const url = `https://github.com/owner/repo`;
       const from = new Date('2026-05-01T00:00:00.000Z');
       const to = new Date('2026-05-31T23:59:59.000Z');
@@ -232,18 +283,18 @@ describe('GithubClient', () => {
         ])
         .mockResolvedValueOnce([
           {
-            id: 1001,
-            sha: 'sha-one',
-            createdAt: '2026-05-10T10:00:00.000Z',
-            status: 'completed',
-            conclusion: 'success',
-          },
-          {
             id: 1002,
             sha: 'sha-two',
             createdAt: '2026-05-11T10:00:00.000Z',
             status: null,
             conclusion: null,
+          },
+          {
+            id: 1001,
+            sha: 'sha-one',
+            createdAt: '2026-05-10T10:00:00.000Z',
+            status: 'completed',
+            conclusion: 'success',
           },
         ]);
 

@@ -27,41 +27,47 @@ import {
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import {
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-  DORA_DEFAULT_PULL_REQUESTS_COLLECTOR_ID,
+  DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
   DORA_TIME_WINDOW_DAYS,
 } from '../constants';
 import {
-  pullRequestsCollectorInputSchema,
-  pullRequestsCollectorOutputSchema,
+  rangePullRequestsCollectorInputSchema,
+  rangePullRequestsCollectorOutputSchema,
 } from './schemas/pullRequestSchemas';
 import {
   deploymentsCollectorInputSchema,
   deploymentsCollectorOutputSchema,
 } from './schemas/deploymentSchemas';
+import { calculateMedian } from './utils/calculationUtils';
 
-type DoraLeadTimeForChangesProviderOptions = {
+type DoraMedianLeadTimeForChangesProviderOptions = {
   collectorsService: ScorecardCollectorsService;
   deploymentsCollectorId: string;
-  pullRequestsCollectorId: string;
+  deploymentRangePullRequestsCollectorId: string;
   deploymentsCollectorInput: Record<string, unknown>;
-  pullRequestsCollectorInput: Record<string, unknown>;
+  deploymentRangePullRequestsCollectorInput: Record<string, unknown>;
 };
 
-export class DoraLeadTimeForChangesProvider
+export class DoraMedianLeadTimeForChangesProvider
   implements MetricProvider<'number'>
 {
   private readonly collectorsService: ScorecardCollectorsService;
   private readonly deploymentsCollectorId: string;
-  private readonly pullRequestsCollectorId: string;
+  private readonly deploymentRangePullRequestsCollectorId: string;
   private readonly deploymentsCollectorInput: Record<string, unknown>;
-  private readonly pullRequestsCollectorInput: Record<string, unknown>;
+  private readonly deploymentRangePullRequestsCollectorInput: Record<
+    string,
+    unknown
+  >;
 
-  private constructor(options: DoraLeadTimeForChangesProviderOptions) {
+  private constructor(options: DoraMedianLeadTimeForChangesProviderOptions) {
     this.collectorsService = options.collectorsService;
     this.deploymentsCollectorId = options.deploymentsCollectorId;
-    this.pullRequestsCollectorId = options.pullRequestsCollectorId;
+    this.deploymentRangePullRequestsCollectorId =
+      options.deploymentRangePullRequestsCollectorId;
     this.deploymentsCollectorInput = options.deploymentsCollectorInput;
-    this.pullRequestsCollectorInput = options.pullRequestsCollectorInput;
+    this.deploymentRangePullRequestsCollectorInput =
+      options.deploymentRangePullRequestsCollectorInput;
   }
 
   static fromConfig(
@@ -69,24 +75,24 @@ export class DoraLeadTimeForChangesProvider
     options: {
       collectorsService: ScorecardCollectorsService;
     },
-  ): DoraLeadTimeForChangesProvider {
-    return new DoraLeadTimeForChangesProvider({
+  ): DoraMedianLeadTimeForChangesProvider {
+    return new DoraMedianLeadTimeForChangesProvider({
       collectorsService: options.collectorsService,
       deploymentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.lead_time_for_changes.collectors.deployments.id',
+          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deployments.id',
         ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-      pullRequestsCollectorId:
+      deploymentRangePullRequestsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.lead_time_for_changes.collectors.pullRequests.id',
-        ) ?? DORA_DEFAULT_PULL_REQUESTS_COLLECTOR_ID,
+          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deploymentRangePullRequests.id',
+        ) ?? DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
       deploymentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.lead_time_for_changes.collectors.deployments.input',
+          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deployments.input',
         ) ?? {},
-      pullRequestsCollectorInput:
+      deploymentRangePullRequestsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.lead_time_for_changes.collectors.pullRequests.input',
+          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deploymentRangePullRequests.input',
         ) ?? {},
     });
   }
@@ -96,7 +102,7 @@ export class DoraLeadTimeForChangesProvider
   }
 
   getProviderId() {
-    return 'dora.lead_time_for_changes';
+    return 'dora.median_lead_time_for_changes';
   }
 
   getMetricType(): 'number' {
@@ -106,9 +112,9 @@ export class DoraLeadTimeForChangesProvider
   getMetric(): Metric<'number'> {
     return {
       id: this.getProviderId(),
-      title: 'DORA lead time for changes',
+      title: 'DORA - Median Lead Time for Changes',
       description:
-        'Average lead time in hours between merged PR and deployment for the configured datasource.',
+        'Measures the median time from merge commit to production deployment over the past 30 days. Elite performers have a lead time of less than one hour',
       type: this.getMetricType(),
       history: true,
     };
@@ -142,52 +148,68 @@ export class DoraLeadTimeForChangesProvider
         to: to.toISOString(),
       },
     });
-    const deployments = deploymentsCollected.deployments;
 
-    if (deployments.length === 0) {
+    // Deployments are expected to be returned sorted ascending by createdAt.
+    const deployments = deploymentsCollected.deployments.filter(deployment => {
+      // Only successful deployments count
+      if (deployment.result !== 'success') {
+        return false;
+      }
+      // Only deplyoments to production environment count, treat unknown environment as production
+      if (
+        deployment.environment &&
+        deployment.environment.toLowerCase() !== 'production'
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (deployments.length < 2) {
       return 0;
     }
 
     const leadTimeHours: number[] = [];
-    for (const deployment of deployments) {
+    for (
+      let deploymentIndex = 1;
+      deploymentIndex < deployments.length;
+      deploymentIndex++
+    ) {
+      const previousDeployment = deployments[deploymentIndex - 1];
+      const deployment = deployments[deploymentIndex];
+
       const pullRequestsCollected = await this.collectorsService.collect({
-        collectorId: this.pullRequestsCollectorId,
+        collectorId: this.deploymentRangePullRequestsCollectorId,
         contract: {
-          inputSchema: pullRequestsCollectorInputSchema,
-          outputSchema: pullRequestsCollectorOutputSchema,
+          inputSchema: rangePullRequestsCollectorInputSchema,
+          outputSchema: rangePullRequestsCollectorOutputSchema,
         },
         entity,
         input: {
-          ...this.pullRequestsCollectorInput,
-          commitSha: deployment.commitSha,
+          ...this.deploymentRangePullRequestsCollectorInput,
+          baseCommitSha: previousDeployment.commitSha,
+          headCommitSha: deployment.commitSha,
         },
       });
 
-      const mergedAt = pullRequestsCollected.pullRequests.find(
-        pullRequest => pullRequest.mergedAt,
-      )?.mergedAt;
-      if (!mergedAt) {
-        continue;
-      }
-
-      const mergedAtTimestamp = new Date(mergedAt).getTime();
       const deployedAtTimestamp = new Date(deployment.createdAt).getTime();
-      if (
-        Number.isNaN(mergedAtTimestamp) ||
-        Number.isNaN(deployedAtTimestamp) ||
-        deployedAtTimestamp < mergedAtTimestamp
-      ) {
-        continue;
+      for (const pullRequest of pullRequestsCollected.pullRequests) {
+        const mergedAtTimestamp = new Date(pullRequest.mergedAt).getTime();
+        if (deployedAtTimestamp < mergedAtTimestamp) {
+          continue;
+        }
+        leadTimeHours.push(
+          (deployedAtTimestamp - mergedAtTimestamp) / 3_600_000,
+        );
       }
-
-      leadTimeHours.push((deployedAtTimestamp - mergedAtTimestamp) / 3_600_000);
     }
 
     if (leadTimeHours.length === 0) {
       return 0;
     }
 
-    const totalHours = leadTimeHours.reduce((sum, value) => sum + value, 0);
-    return Number((totalHours / leadTimeHours.length).toFixed(4));
+    const median = calculateMedian(leadTimeHours);
+    return Number(median.toFixed(4));
   }
 }

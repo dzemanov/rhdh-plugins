@@ -15,112 +15,65 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import { z } from 'zod';
 import { DoraDeploymentFrequencyProvider } from './DoraDeploymentFrequencyProvider';
-import { ScorecardCollectorsService } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import {
+  buildMockCollectorsService,
+  buildMockDeploymentsCollector,
+  mockEntity,
+} from './__fixtures__';
+import { DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID } from '../constants';
 
 describe('DoraDeploymentFrequencyProvider', () => {
-  const entity = {
-    apiVersion: 'backstage.io/v1alpha1',
-    kind: 'Component',
-    metadata: {
-      name: 'test-component',
-      annotations: {
-        'github.com/project-slug': 'org/repo',
-      },
-    },
-  };
+  let deploymentsCollector: ReturnType<typeof buildMockDeploymentsCollector>;
+  let collectorsService: ReturnType<
+    typeof buildMockCollectorsService
+  >['collectorsService'];
+  let collect: ReturnType<typeof buildMockCollectorsService>['collect'];
+  let provider: DoraDeploymentFrequencyProvider;
 
-  const createDeploymentsCollector = (
-    collectorId = '',
-    deployments = [
+  beforeEach(() => {
+    deploymentsCollector = buildMockDeploymentsCollector({
+      deployments: [],
+      collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+    });
+    ({ collectorsService, collect } = buildMockCollectorsService({
+      collectors: [deploymentsCollector],
+    }));
+    provider = DoraDeploymentFrequencyProvider.fromConfig(
+      new ConfigReader({}),
       {
-        id: '0',
-        commitSha: '',
-        environment: 'unknown',
-        createdAt: '',
-        result: '',
+        collectorsService,
       },
-      {
-        id: '1',
-        commitSha: '',
-        environment: 'unknown',
-        createdAt: '',
-        result: '',
-      },
-    ],
-  ) => ({
-    getCollectorId: () => collectorId,
-    getCollectorDescription: () => 'mock deployments collector',
-    getInputSchema: () =>
-      z.object({
-        from: z.string().datetime(),
-        to: z.string().datetime(),
-      }),
-    getOutputSchema: () =>
-      z.object({
-        deployments: z.array(
-          z.object({
-            id: z.string(),
-            commitSha: z.string(),
-            environment: z.string(),
-            createdAt: z.string(),
-            result: z.enum(['success', 'failure', '']),
-          }),
-        ),
-      }),
-    collect: jest.fn(async (_options: unknown) => ({
-      deployments,
-    })),
+    );
   });
 
-  it('uses configured deployments collector id and calculates frequency from successful deployments', async () => {
-    const customCollectorId = 'custom:deployments';
-    const deploymentsCollector = createDeploymentsCollector(customCollectorId, [
-      {
-        id: '100',
-        commitSha: 'sha-1',
-        environment: 'production',
-        createdAt: '2026-06-01T10:00:00.000Z',
-        result: 'success',
-      },
-      {
-        id: '101',
-        commitSha: 'sha-2',
-        environment: 'production',
-        createdAt: '2026-06-02T10:00:00.000Z',
-        result: 'success',
-      },
-      {
-        id: '102',
-        commitSha: 'sha-3',
-        environment: 'production',
-        createdAt: '2026-06-03T10:00:00.000Z',
-        result: 'failure',
-      },
-      {
-        id: '103',
-        commitSha: 'sha-4',
-        environment: 'production',
-        createdAt: '2026-06-04T10:00:00.000Z',
-        result: '',
-      },
-    ]);
+  it('should use default collectors when no config', async () => {
+    await provider.calculateMetric(mockEntity);
+    expect(collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+        input: expect.objectContaining({
+          from: expect.any(String),
+          to: expect.any(String),
+        }),
+      }),
+    );
+  });
 
-    const collect = jest.fn(async ({ collectorId }) => {
-      if (collectorId !== customCollectorId) {
-        throw new Error(`Unexpected collector id "${collectorId}"`);
-      }
-      return deploymentsCollector.collect({
-        entity,
-        input: {
-          from: new Date().toISOString(),
-          to: new Date().toISOString(),
-        },
-      });
+  it('should use custom collectors and pass custom inputs', async () => {
+    const customCollectorId = 'custom:deployments';
+    const customDeploymentsCollector = buildMockDeploymentsCollector({
+      deployments: [],
+      collectorId: customCollectorId,
+    });
+    const {
+      collectorsService: customCollectorsService,
+      collect: customCollect,
+    } = buildMockCollectorsService({
+      collectors: [customDeploymentsCollector],
     });
 
-    const provider = DoraDeploymentFrequencyProvider.fromConfig(
+    const customProvider = DoraDeploymentFrequencyProvider.fromConfig(
       new ConfigReader({
         scorecard: {
           plugins: {
@@ -130,7 +83,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
                   deployments: {
                     id: customCollectorId,
                     input: {
-                      workflowName: 'Deploy',
+                      artificialLabel: 'frequency-test',
                     },
                   },
                 },
@@ -140,107 +93,76 @@ describe('DoraDeploymentFrequencyProvider', () => {
         },
       }),
       {
-        collectorsService: {
-          init: () => undefined,
-          hasCollector: () => true,
-          collect,
-        } as ScorecardCollectorsService,
+        collectorsService: customCollectorsService,
       },
     );
 
-    const frequency = await provider.calculateMetric(entity);
+    await customProvider.calculateMetric(mockEntity);
 
-    expect(frequency).toBe(0.2857);
-    expect(collect).toHaveBeenCalledWith(
+    expect(customCollect).toHaveBeenCalledWith(
       expect.objectContaining({
         collectorId: customCollectorId,
-      }),
-    );
-    expect(deploymentsCollector.collect).toHaveBeenCalledTimes(1);
-    expect(deploymentsCollector.collect).toHaveBeenCalledWith(
-      expect.objectContaining({
         input: expect.objectContaining({
           from: expect.any(String),
           to: expect.any(String),
+          artificialLabel: 'frequency-test',
         }),
       }),
     );
   });
 
-  it('uses default deployments collector id when config is not set', async () => {
-    const defaultCollectorId = 'github:deployments';
-    const deploymentsCollector = createDeploymentsCollector(
-      defaultCollectorId,
-      [
+  it('should calculate frequency for success result and production environment', async () => {
+    (deploymentsCollector.collect as jest.Mock).mockResolvedValueOnce({
+      deployments: [
         {
-          id: '200',
-          commitSha: 'sha-default',
+          id: '100',
+          commitSha: 'sha-1',
           environment: 'production',
-          createdAt: '2026-06-05T10:00:00.000Z',
+          createdAt: '2026-06-01T10:00:00.000Z',
+          result: 'success',
+        },
+        {
+          id: '101',
+          commitSha: 'sha-2',
+          environment: 'production',
+          createdAt: '2026-06-02T10:00:00.000Z',
+          result: 'failure', // omitted
+        },
+        {
+          id: '102',
+          commitSha: 'sha-3',
+          environment: 'production',
+          createdAt: '2026-06-03T10:00:00.000Z',
+          result: '', // omitted
+        },
+        {
+          id: '103',
+          commitSha: 'sha-2',
+          createdAt: '2026-06-04T10:00:00.000Z',
+          result: 'success',
+        },
+        {
+          id: '104',
+          commitSha: 'sha-4',
+          environment: 'development', // omitted
+          createdAt: '2026-06-04T11:00:00.000Z',
           result: 'success',
         },
       ],
-    );
-
-    const collect = jest.fn(async ({ collectorId }) => {
-      if (collectorId !== defaultCollectorId) {
-        throw new Error(`Unexpected collector id "${collectorId}"`);
-      }
-      return deploymentsCollector.collect({
-        entity,
-        input: {
-          from: new Date().toISOString(),
-          to: new Date().toISOString(),
-        },
-      });
     });
 
-    const provider = DoraDeploymentFrequencyProvider.fromConfig(
-      new ConfigReader({}),
-      {
-        collectorsService: {
-          init: () => undefined,
-          hasCollector: () => true,
-          collect,
-        } as ScorecardCollectorsService,
-      },
-    );
+    const frequency = await provider.calculateMetric(mockEntity);
 
-    const frequency = await provider.calculateMetric(entity);
-
-    expect(frequency).toBe(0.1429);
-    expect(collect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectorId: defaultCollectorId,
-      }),
-    );
+    expect(frequency).toBe(0.2857); // 2 successful deployments / 7 days
   });
 
   it('returns 0 when no deployments are collected', async () => {
-    const collectorId = 'github:deployments';
-    const deploymentsCollector = createDeploymentsCollector(collectorId, []);
+    (deploymentsCollector.collect as jest.Mock).mockResolvedValueOnce({
+      deployments: [],
+    });
 
-    const provider = DoraDeploymentFrequencyProvider.fromConfig(
-      new ConfigReader({}),
-      {
-        collectorsService: {
-          init: () => undefined,
-          hasCollector: () => true,
-          collect: async () =>
-            deploymentsCollector.collect({
-              entity,
-              input: {
-                from: new Date().toISOString(),
-                to: new Date().toISOString(),
-              },
-            }),
-        } as ScorecardCollectorsService,
-      },
-    );
-
-    const frequency = await provider.calculateMetric(entity);
+    const frequency = await provider.calculateMetric(mockEntity);
 
     expect(frequency).toBe(0);
-    expect(deploymentsCollector.collect).toHaveBeenCalledTimes(1);
   });
 });

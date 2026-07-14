@@ -14,29 +14,14 @@
  * limitations under the License.
  */
 
-import { z } from 'zod';
+export function calculateMedian(values: number[]): number {
+  if (values.length === 0) {
+    throw new Error('Unable to calculate median from empty values');
+  }
+  const sortedValues = [...values].sort((left, right) => left - right);
+  const middleIndex = Math.floor(sortedValues.length / 2);
 
-export const rangePullRequestsCollectorInputSchema = z
-  .object({
-    baseCommitSha: z.string().min(1),
-    headCommitSha: z.string().min(1),
-  })
-  .passthrough();
-
-const pullRequestSchema = z
-  .object({
-    id: z.string(),
-    mergedAt: z.string().datetime(),
-  })
-  .passthrough();
-export type PullRequest = z.infer<typeof pullRequestSchema>;
-
-export const rangePullRequestsCollectorOutputSchema = z
-  .object({
-    pullRequests: z.array(pullRequestSchema),
-  })
-  .passthrough();
-
-export type PullRequestsCollectorOutput = {
-  pullRequests: PullRequest[];
-};
+  return sortedValues.length % 2 === 0
+    ? (sortedValues[middleIndex - 1] + sortedValues[middleIndex]) / 2
+    : sortedValues[middleIndex];
+}

@@ -29,7 +29,6 @@ import {
   DORA_TIME_WINDOW_DAYS,
 } from '../constants';
 import {
-  type DeploymentsCollectorOutput,
   deploymentsCollectorInputSchema,
   deploymentsCollectorOutputSchema,
 } from './schemas/deploymentSchemas';
@@ -87,9 +86,9 @@ export class DoraDeploymentFrequencyProvider
   getMetric(): Metric<'number'> {
     return {
       id: this.getProviderId(),
-      title: 'DORA deployment frequency',
+      title: 'DORA - Deployment Frequency',
       description:
-        'Successful deployments per day over the last 30 days for the configured datasource.',
+        'Tracks how often code is successfully deployed to production over the past 30 days. Elite performers deploy on demand (multiple times per day).',
       type: this.getMetricType(),
       history: true,
     };
@@ -124,19 +123,26 @@ export class DoraDeploymentFrequencyProvider
       },
     });
 
-    const deployments = (deploymentsCollected as DeploymentsCollectorOutput)
-      .deployments;
-
-    if (deployments.length === 0) {
+    if (deploymentsCollected.deployments.length === 0) {
       return 0;
     }
 
-    const successfulDeployments = deployments.filter(
-      deployment => deployment.result === 'success',
-    );
+    const deployments = deploymentsCollected.deployments.filter(deployment => {
+      // Only successful deployments count
+      if (deployment.result !== 'success') {
+        return false;
+      }
+      // Only deplyoments to production environment count, treat unknown environment as production
+      if (
+        deployment.environment &&
+        deployment.environment.toLowerCase() !== 'production'
+      ) {
+        return false;
+      }
 
-    return Number(
-      (successfulDeployments.length / DORA_TIME_WINDOW_DAYS).toFixed(4),
-    );
+      return true;
+    });
+
+    return Number((deployments.length / DORA_TIME_WINDOW_DAYS).toFixed(4));
   }
 }

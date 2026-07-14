@@ -1,0 +1,285 @@
+/*
+ * Copyright Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { ConfigReader } from '@backstage/config';
+import {
+  buildMockDeploymentsCollector,
+  buildMockRangePullRequestsCollector,
+  buildMockCollectorsService,
+  mockEntity,
+} from './__fixtures__';
+import { DoraMedianLeadTimeForChangesProvider } from './DoraMedianLeadTimeForChangesProvider';
+import {
+  DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+  DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+} from '../constants';
+import { Deployment } from './schemas/deploymentSchemas';
+import { PullRequest } from './schemas/pullRequestSchemas';
+
+describe('DoraMedianLeadTimeForChangesProvider', () => {
+  const deployments: Deployment[] = [
+    {
+      id: '100',
+      commitSha: 'sha-previous',
+      environment: 'production',
+      createdAt: '2026-06-06T12:00:00.000Z',
+      result: 'success',
+    },
+    {
+      id: '101',
+      commitSha: 'sha-current',
+      environment: 'production',
+      createdAt: '2026-06-08T12:00:00.000Z',
+      result: 'success',
+    },
+  ];
+  const pullRequests: PullRequest[] = [
+    {
+      id: '123',
+      mergedAt: '2026-06-05T12:00:00.000Z', // 72h from sha-current createdAt
+    },
+    {
+      id: '124',
+      mergedAt: '2026-06-07T12:00:00.000Z', // 24h from sha-current createdAt
+    },
+  ];
+
+  let deploymentsCollector: ReturnType<typeof buildMockDeploymentsCollector>;
+  let rangePullRequestsCollector: ReturnType<
+    typeof buildMockRangePullRequestsCollector
+  >;
+  let collectorsService: ReturnType<
+    typeof buildMockCollectorsService
+  >['collectorsService'];
+  let collect: ReturnType<typeof buildMockCollectorsService>['collect'];
+  let provider: DoraMedianLeadTimeForChangesProvider;
+
+  beforeEach(() => {
+    deploymentsCollector = buildMockDeploymentsCollector({
+      deployments,
+      collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+    });
+    rangePullRequestsCollector = buildMockRangePullRequestsCollector({
+      pullRequests,
+      collectorId: DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+    });
+    ({ collectorsService, collect } = buildMockCollectorsService({
+      collectors: [deploymentsCollector, rangePullRequestsCollector],
+    }));
+    provider = DoraMedianLeadTimeForChangesProvider.fromConfig(
+      new ConfigReader({}),
+      {
+        collectorsService,
+      },
+    );
+  });
+
+  it('should use default collectors when no config', async () => {
+    await provider.calculateMetric(mockEntity);
+    expect(collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+        input: expect.objectContaining({
+          from: expect.any(String),
+          to: expect.any(String),
+        }),
+      }),
+    );
+    expect(collect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectorId: DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+        input: expect.objectContaining({
+          baseCommitSha: 'sha-previous',
+          headCommitSha: 'sha-current',
+        }),
+      }),
+    );
+  });
+
+  it('should use custom collectors and pass custom inputs', async () => {
+    const customDeploymentsCollectorId = 'custom:deployments';
+    const customRangePullRequestsCollectorId = 'custom:rangePullRequests';
+    const customDeploymentsCollector = buildMockDeploymentsCollector({
+      deployments,
+      collectorId: customDeploymentsCollectorId,
+    });
+    const customRangePullRequestsCollector =
+      buildMockRangePullRequestsCollector({
+        pullRequests,
+        collectorId: customRangePullRequestsCollectorId,
+      });
+    const {
+      collectorsService: customCollectorsService,
+      collect: customCollect,
+    } = buildMockCollectorsService({
+      collectors: [
+        customDeploymentsCollector,
+        customRangePullRequestsCollector,
+      ],
+    });
+
+    const customProvider = DoraMedianLeadTimeForChangesProvider.fromConfig(
+      new ConfigReader({
+        scorecard: {
+          plugins: {
+            dora: {
+              median_lead_time_for_changes: {
+                collectors: {
+                  deployments: {
+                    id: customDeploymentsCollectorId,
+                    input: {
+                      artificialDeploymentFlag: true,
+                      customDeploymentsInputLabel: 'deployments-custom-input',
+                    },
+                  },
+                  deploymentRangePullRequests: {
+                    id: customRangePullRequestsCollectorId,
+                    input: {
+                      artificialRangeLabel: 'range-custom-input',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      {
+        collectorsService: customCollectorsService,
+      },
+    );
+
+    await customProvider.calculateMetric(mockEntity);
+
+    expect(customCollect).toHaveBeenCalledTimes(2);
+    expect(customCollect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectorId: customDeploymentsCollectorId,
+        input: expect.objectContaining({
+          from: expect.any(String),
+          to: expect.any(String),
+          artificialDeploymentFlag: true,
+          customDeploymentsInputLabel: 'deployments-custom-input',
+        }),
+      }),
+    );
+    expect(customCollect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collectorId: customRangePullRequestsCollectorId,
+        input: expect.objectContaining({
+          baseCommitSha: 'sha-previous',
+          headCommitSha: 'sha-current',
+          artificialRangeLabel: 'range-custom-input',
+        }),
+      }),
+    );
+  });
+
+  it('should calculate median lead time for changes', async () => {
+    const leadTime = await provider.calculateMetric(mockEntity);
+
+    expect(leadTime).toBe(48);
+  });
+
+  it('should calculate median with multiple pull requests across multiple deployment ranges', async () => {
+    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+      deployments: [
+        {
+          id: '400',
+          commitSha: 'sha-1',
+          environment: 'production',
+          createdAt: '2026-06-10T00:00:00.000Z',
+          result: 'success',
+        },
+        {
+          id: '401',
+          commitSha: 'sha-2',
+          environment: 'production',
+          createdAt: '2026-06-11T00:00:00.000Z',
+          result: 'success',
+        },
+        {
+          id: '402',
+          commitSha: 'sha-3',
+          environment: 'production',
+          createdAt: '2026-06-12T00:00:00.000Z',
+          result: 'success',
+        },
+      ],
+    });
+    jest
+      .mocked(rangePullRequestsCollector.collect)
+      .mockResolvedValueOnce({
+        pullRequests: [
+          { id: '501', mergedAt: '2026-06-10T18:00:00.000Z' }, // 6h from sha-2 createdAt
+          { id: '502', mergedAt: '2026-06-10T12:00:00.000Z' }, // 12h from sha-2 createdAt
+        ],
+      })
+      .mockResolvedValueOnce({
+        pullRequests: [{ id: '503', mergedAt: '2026-06-11T12:00:00.000Z' }], // 12h from sha-3 createdAt
+      });
+
+    const leadTime = await provider.calculateMetric(mockEntity);
+
+    expect(leadTime).toBe(12);
+    expect(rangePullRequestsCollector.collect).toHaveBeenCalledTimes(2);
+    expect(rangePullRequestsCollector.collect).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        input: expect.objectContaining({
+          baseCommitSha: 'sha-1',
+          headCommitSha: 'sha-2',
+        }),
+      }),
+    );
+    expect(rangePullRequestsCollector.collect).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        input: expect.objectContaining({
+          baseCommitSha: 'sha-2',
+          headCommitSha: 'sha-3',
+        }),
+      }),
+    );
+  });
+
+  it('should return 0 when no deployments found', async () => {
+    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+      deployments: [],
+    });
+    jest.mocked(rangePullRequestsCollector.collect).mockResolvedValueOnce({
+      pullRequests: [],
+    });
+
+    const leadTime = await provider.calculateMetric(mockEntity);
+
+    expect(leadTime).toBe(0);
+    expect(rangePullRequestsCollector.collect).not.toHaveBeenCalled();
+  });
+
+  it('should return 0 when no pull requests found', async () => {
+    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+      deployments,
+    });
+    jest.mocked(rangePullRequestsCollector.collect).mockResolvedValueOnce({
+      pullRequests: [],
+    });
+
+    const leadTime = await provider.calculateMetric(mockEntity);
+
+    expect(leadTime).toBe(0);
+  });
+});

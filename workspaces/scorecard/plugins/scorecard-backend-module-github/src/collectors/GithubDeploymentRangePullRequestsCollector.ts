@@ -22,15 +22,16 @@ import { z } from 'zod';
 import { GithubClient } from '../github/GithubClient';
 import { getRepositoryInformationFromEntity } from '../github/utils';
 
-export class GithubDeploymentPullRequestsCollector
+export class GithubDeploymentRangePullRequestsCollector
   implements
     Collector<
-      (typeof GithubDeploymentPullRequestsCollector)['inputSchema'],
-      (typeof GithubDeploymentPullRequestsCollector)['outputSchema']
+      (typeof GithubDeploymentRangePullRequestsCollector)['inputSchema'],
+      (typeof GithubDeploymentRangePullRequestsCollector)['outputSchema']
     >
 {
   static readonly inputSchema = z.object({
-    commitSha: z.string().min(1),
+    baseCommitSha: z.string().min(1),
+    headCommitSha: z.string().min(1),
   });
   static readonly outputSchema = z.object({
     pullRequests: z.array(
@@ -47,48 +48,72 @@ export class GithubDeploymentPullRequestsCollector
     this.client = new GithubClient(config);
   }
 
-  static fromConfig(config: Config): GithubDeploymentPullRequestsCollector {
-    return new GithubDeploymentPullRequestsCollector(config);
+  static fromConfig(
+    config: Config,
+  ): GithubDeploymentRangePullRequestsCollector {
+    return new GithubDeploymentRangePullRequestsCollector(config);
   }
 
   getCollectorId(): string {
-    return 'github:deploymentPullRequests';
+    return 'github:deploymentRangePullRequests';
   }
 
   getCollectorDescription(): string {
-    return 'Collect GitHub pull requests linked to a deployment commit SHA';
+    return 'Collect GitHub pull requests included in a deployment commit range';
   }
 
   getInputSchema() {
-    return GithubDeploymentPullRequestsCollector.inputSchema;
+    return GithubDeploymentRangePullRequestsCollector.inputSchema;
   }
 
   getOutputSchema() {
-    return GithubDeploymentPullRequestsCollector.outputSchema;
+    return GithubDeploymentRangePullRequestsCollector.outputSchema;
   }
 
   async collect(options: {
     entity: Entity;
     input: z.infer<
-      (typeof GithubDeploymentPullRequestsCollector)['inputSchema']
+      (typeof GithubDeploymentRangePullRequestsCollector)['inputSchema']
     >;
   }): Promise<
-    z.infer<(typeof GithubDeploymentPullRequestsCollector)['outputSchema']>
+    z.infer<(typeof GithubDeploymentRangePullRequestsCollector)['outputSchema']>
   > {
     const repository = getRepositoryInformationFromEntity(options.entity);
     const { target } = getEntitySourceLocation(options.entity);
 
-    const pullRequests = await this.client.getCommitPullRequests(
+    const commitShas = await this.client.getCommitShasBetween(
       target,
       repository,
-      options.input.commitSha,
+      options.input.baseCommitSha,
+      options.input.headCommitSha,
     );
 
+    const pullRequestsById = new Map<
+      string,
+      { id: string; mergedAt: string | null }
+    >();
+    for (const commitSha of commitShas) {
+      const commitPullRequests = await this.client.getCommitPullRequests(
+        target,
+        repository,
+        commitSha,
+      );
+
+      for (const pullRequest of commitPullRequests) {
+        const pullRequestId = String(pullRequest.number);
+        if (pullRequestsById.has(pullRequestId)) {
+          continue;
+        }
+
+        pullRequestsById.set(pullRequestId, {
+          id: pullRequestId,
+          mergedAt: pullRequest.mergedAt,
+        });
+      }
+    }
+
     return {
-      pullRequests: pullRequests.map(pullRequest => ({
-        id: String(pullRequest.number),
-        mergedAt: pullRequest.mergedAt,
-      })),
+      pullRequests: Array.from(pullRequestsById.values()),
     };
   }
 }

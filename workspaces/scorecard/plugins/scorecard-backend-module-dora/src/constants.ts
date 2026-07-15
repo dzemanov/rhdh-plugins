@@ -17,4 +17,4 @@
 export const DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID = 'github:deployments';
 export const DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID =
   'github:deploymentRangePullRequests';
-export const DORA_TIME_WINDOW_DAYS = 7;
+export const DORA_TIME_WINDOW_DAYS = 30;

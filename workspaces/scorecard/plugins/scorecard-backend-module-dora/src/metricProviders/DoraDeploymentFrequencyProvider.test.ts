@@ -153,7 +153,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
 
     const frequency = await provider.calculateMetric(mockEntity);
 
-    expect(frequency).toBe(0.2857); // 2 successful deployments / 7 days
+    expect(frequency).toBe(0.4667); // (2 successful deployments / 30 days) * 7
   });
 
   it('returns 0 when no deployments are collected', async () => {

@@ -16,8 +16,8 @@
 import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
 import {
-  DEFAULT_NUMBER_THRESHOLDS,
   Metric,
+  ScorecardThresholdRuleColors,
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
@@ -95,7 +95,29 @@ export class DoraDeploymentFrequencyProvider
   }
 
   getMetricThresholds(): ThresholdConfig {
-    return DEFAULT_NUMBER_THRESHOLDS;
+    // Calculated metric is deployments/week from a 30-day window
+    return {
+      rules: [
+        {
+          key: 'elite',
+          expression: '>=7',
+          color: ScorecardThresholdRuleColors.SUCCESS,
+          icon: 'scorecardSuccessStatusIcon',
+        },
+        {
+          key: 'medium',
+          expression: '1-7',
+          color: ScorecardThresholdRuleColors.WARNING,
+          icon: 'scorecardWarningStatusIcon',
+        },
+        {
+          key: 'low',
+          expression: '<1',
+          color: ScorecardThresholdRuleColors.ERROR,
+          icon: 'scorecardErrorStatusIcon',
+        },
+      ],
+    };
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
@@ -143,6 +165,7 @@ export class DoraDeploymentFrequencyProvider
       return true;
     });
 
-    return Number((deployments.length / DORA_TIME_WINDOW_DAYS).toFixed(4));
+    const deploymentsPerWeek = (deployments.length / DORA_TIME_WINDOW_DAYS) * 7;
+    return Number(deploymentsPerWeek.toFixed(4));
   }
 }

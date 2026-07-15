@@ -17,8 +17,8 @@
 import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
 import {
-  DEFAULT_NUMBER_THRESHOLDS,
   Metric,
+  ScorecardThresholdRuleColors,
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
@@ -121,7 +121,29 @@ export class DoraMedianLeadTimeForChangesProvider
   }
 
   getMetricThresholds(): ThresholdConfig {
-    return DEFAULT_NUMBER_THRESHOLDS;
+    // Calculated metric is in hours from a 30-day window
+    return {
+      rules: [
+        {
+          key: 'elite',
+          expression: '<24',
+          color: ScorecardThresholdRuleColors.SUCCESS,
+          icon: 'scorecardSuccessStatusIcon',
+        },
+        {
+          key: 'medium',
+          expression: '24-168',
+          color: ScorecardThresholdRuleColors.WARNING,
+          icon: 'scorecardWarningStatusIcon',
+        },
+        {
+          key: 'low',
+          expression: '>168',
+          color: ScorecardThresholdRuleColors.ERROR,
+          icon: 'scorecardErrorStatusIcon',
+        },
+      ],
+    };
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {

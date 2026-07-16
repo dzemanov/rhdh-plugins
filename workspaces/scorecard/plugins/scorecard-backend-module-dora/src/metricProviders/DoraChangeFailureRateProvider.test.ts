@@ -132,7 +132,7 @@ describe('DoraChangeFailureRateProvider', () => {
         scorecard: {
           plugins: {
             dora: {
-              change_failure_rate: {
+              changeFailureRate: {
                 collectors: {
                   deployments: {
                     id: customDeploymentsCollectorId,

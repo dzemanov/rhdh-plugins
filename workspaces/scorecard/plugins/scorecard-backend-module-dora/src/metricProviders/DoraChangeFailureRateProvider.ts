@@ -72,19 +72,19 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       collectorsService: options.collectorsService,
       deploymentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.change_failure_rate.collectors.deployments.id',
+          'scorecard.plugins.dora.changeFailureRate.collectors.deployments.id',
         ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
       incidentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.change_failure_rate.collectors.incidents.id',
+          'scorecard.plugins.dora.changeFailureRate.collectors.incidents.id',
         ) ?? DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
       deploymentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.change_failure_rate.collectors.deployments.input',
+          'scorecard.plugins.dora.changeFailureRate.collectors.deployments.input',
         ) ?? {},
       incidentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.change_failure_rate.collectors.incidents.input',
+          'scorecard.plugins.dora.changeFailureRate.collectors.incidents.input',
         ) ?? {},
     });
   }
@@ -94,7 +94,7 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
   }
 
   getProviderId() {
-    return 'dora.change_failure_rate';
+    return 'dora.changeFailureRate';
   }
 
   getMetricType(): 'number' {

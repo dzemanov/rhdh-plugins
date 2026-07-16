@@ -64,11 +64,11 @@ export class DoraMedianTimeToResolveProvider
       collectorsService: options.collectorsService,
       incidentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.median_time_to_resolve.collectors.incidents.id',
+          'scorecard.plugins.dora.medianTimeToResolve.collectors.incidents.id',
         ) ?? DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
       incidentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.median_time_to_resolve.collectors.incidents.input',
+          'scorecard.plugins.dora.medianTimeToResolve.collectors.incidents.input',
         ) ?? {},
     });
   }
@@ -78,7 +78,7 @@ export class DoraMedianTimeToResolveProvider
   }
 
   getProviderId() {
-    return 'dora.median_time_to_resolve';
+    return 'dora.medianTimeToResolve';
   }
 
   getMetricType(): 'number' {

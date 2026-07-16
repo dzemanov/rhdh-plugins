@@ -90,7 +90,7 @@ describe('DoraMedianTimeToResolveProvider', () => {
         scorecard: {
           plugins: {
             dora: {
-              median_time_to_resolve: {
+              medianTimeToResolve: {
                 collectors: {
                   incidents: {
                     id: customIncidentsCollectorId,

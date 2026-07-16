@@ -62,7 +62,7 @@ export interface Config {
           thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
-        median_time_to_resolve?: {
+        medianTimeToResolve?: {
           collectors?: {
             incidents?: {
               id: string;
@@ -77,7 +77,7 @@ export interface Config {
           };
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
-        change_failure_rate?: {
+        changeFailureRate?: {
           collectors?: {
             deployments?: {
               id: string;

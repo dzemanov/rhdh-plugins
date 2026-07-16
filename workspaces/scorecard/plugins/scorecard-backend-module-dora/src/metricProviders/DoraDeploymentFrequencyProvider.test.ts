@@ -78,7 +78,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
         scorecard: {
           plugins: {
             dora: {
-              deployment_frequency: {
+              deploymentFrequency: {
                 collectors: {
                   deployments: {
                     id: customCollectorId,

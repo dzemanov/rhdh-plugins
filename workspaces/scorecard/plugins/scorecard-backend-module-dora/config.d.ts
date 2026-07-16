@@ -21,7 +21,7 @@ export interface Config {
   scorecard?: {
     plugins?: {
       dora?: {
-        deployment_frequency?: {
+        deploymentFrequency?: {
           collectors?: {
             deployments?: {
               id: string;
@@ -36,7 +36,7 @@ export interface Config {
           };
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
-        median_lead_time_for_changes?: {
+        medianLeadTimeForChanges?: {
           collectors?: {
             deployments?: {
               id: string;

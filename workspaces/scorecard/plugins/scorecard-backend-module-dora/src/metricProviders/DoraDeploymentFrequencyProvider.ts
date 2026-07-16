@@ -62,11 +62,11 @@ export class DoraDeploymentFrequencyProvider
       collectorsService: options.collectorsService,
       deploymentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.deployment_frequency.collectors.deployments.id',
+          'scorecard.plugins.dora.deploymentFrequency.collectors.deployments.id',
         ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
       deploymentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.deployment_frequency.collectors.deployments.input',
+          'scorecard.plugins.dora.deploymentFrequency.collectors.deployments.input',
         ) ?? {},
     });
   }
@@ -76,7 +76,7 @@ export class DoraDeploymentFrequencyProvider
   }
 
   getProviderId() {
-    return 'dora.deployment_frequency';
+    return 'dora.deploymentFrequency';
   }
 
   getMetricType(): 'number' {

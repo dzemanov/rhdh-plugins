@@ -80,19 +80,19 @@ export class DoraMedianLeadTimeForChangesProvider
       collectorsService: options.collectorsService,
       deploymentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deployments.id',
+          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deployments.id',
         ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
       deploymentRangePullRequestsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deploymentRangePullRequests.id',
+          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deploymentRangePullRequests.id',
         ) ?? DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
       deploymentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deployments.input',
+          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deployments.input',
         ) ?? {},
       deploymentRangePullRequestsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.median_lead_time_for_changes.collectors.deploymentRangePullRequests.input',
+          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deploymentRangePullRequests.input',
         ) ?? {},
     });
   }
@@ -102,7 +102,7 @@ export class DoraMedianLeadTimeForChangesProvider
   }
 
   getProviderId() {
-    return 'dora.median_lead_time_for_changes';
+    return 'dora.medianLeadTimeForChanges';
   }
 
   getMetricType(): 'number' {

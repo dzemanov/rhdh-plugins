@@ -136,7 +136,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
         scorecard: {
           plugins: {
             dora: {
-              median_lead_time_for_changes: {
+              medianLeadTimeForChanges: {
                 collectors: {
                   deployments: {
                     id: customDeploymentsCollectorId,

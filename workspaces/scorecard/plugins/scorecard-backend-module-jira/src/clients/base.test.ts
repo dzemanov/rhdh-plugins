@@ -23,10 +23,20 @@ import {
   newMockRootConfig,
 } from '../../__fixtures__/testUtils';
 
-const { PROJECT_KEY, COMPONENT, LABEL, TEAM, CUSTOM_FILTER } =
-  ScorecardJiraAnnotations;
+const {
+  PROJECT_KEY,
+  INCIDENT_PROJECT_KEY,
+  COMPONENT,
+  LABEL,
+  TEAM,
+  CUSTOM_FILTER,
+} = ScorecardJiraAnnotations;
 
 class TestJiraClient extends JiraClient {
+  getSearchCountEndpoint(): string {
+    return '/search';
+  }
+
   getSearchEndpoint(): string {
     return '/search';
   }
@@ -63,9 +73,9 @@ describe('JiraClient', () => {
 
     mockRootConfig = newMockRootConfig({ options });
 
-    (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+    (globalThis.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: jest.fn().mockResolvedValueOnce({ total: 10 }),
+      json: jest.fn().mockResolvedValue({ total: 10 }),
     });
 
     mockConnectionStrategy = {
@@ -285,6 +295,32 @@ describe('JiraClient', () => {
     });
   });
 
+  describe('getIncidentFiltersFromEntity', () => {
+    it('should use incident project key and fallback to project key', () => {
+      const incidentEntity = newEntityComponent({
+        [INCIDENT_PROJECT_KEY]: 'INC',
+        [PROJECT_KEY]: 'PROJ',
+      });
+      const fallbackEntity = newEntityComponent({
+        [PROJECT_KEY]: 'PROJ',
+      });
+
+      const filtersWithIncidentProject = (
+        testJiraClient as any
+      ).getIncidentFiltersFromEntity(incidentEntity);
+      const filtersWithFallback = (
+        testJiraClient as any
+      ).getIncidentFiltersFromEntity(fallbackEntity);
+
+      expect(filtersWithIncidentProject).toEqual({
+        project: 'project = "INC"',
+      });
+      expect(filtersWithFallback).toEqual({
+        project: 'project = "PROJ"',
+      });
+    });
+  });
+
   describe('buildJqlFilters', () => {
     it('should use provided mandatory filter when mandatory filter is provided in options', () => {
       const filters = { project: 'project = "MOON"' };
@@ -378,6 +414,63 @@ describe('JiraClient', () => {
         mockEntity,
       );
       expect(count).toEqual(10);
+    });
+  });
+
+  describe('getIncidentIssues', () => {
+    it('should return mapped Jira issues', async () => {
+      const mockEntity = newEntityComponent({
+        [PROJECT_KEY]: 'PROJ',
+        [INCIDENT_PROJECT_KEY]: 'INC',
+      });
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({
+          issues: [
+            {
+              id: '10001',
+              fields: {
+                created: '2026-06-01T10:00:00.000+0530',
+                resolutiondate: '2026-06-01T12:00:00.000+0530',
+              },
+            },
+            {
+              id: '10002',
+              fields: {
+                created: '2026-06-02T10:00:00.000+0530',
+                resolutiondate: null,
+              },
+            },
+          ],
+        }),
+      });
+
+      const issues = await (testJiraClient as any).getIncidentIssues(
+        mockEntity,
+        {
+          from: '2026-06-01T00:00:00.000Z',
+          to: '2026-06-30T23:59:59.999Z',
+        },
+      );
+      const requestOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
+      const requestBody = JSON.parse(requestOptions.body);
+
+      expect(issues).toEqual([
+        {
+          id: '10001',
+          createdAt: '2026-06-01T04:30:00.000Z',
+          resolutionDate: '2026-06-01T06:30:00.000Z',
+        },
+        {
+          id: '10002',
+          createdAt: '2026-06-02T04:30:00.000Z',
+          resolutionDate: null,
+        },
+      ]);
+      expect(requestBody.jql).toContain('project = "INC"');
+      expect(requestBody.jql).toContain('type = Incident');
+      expect(requestBody.jql).toContain('created >= "2026-06-01 00:00"');
+      expect(requestBody.jql).toContain('created <= "2026-06-30 23:59"');
     });
   });
 });

@@ -16,14 +16,32 @@
 
 import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
-import { JiraEntityFilters, JiraOptions, RequestOptions } from './types';
+import {
+  JiraEntityFilters,
+  JiraEntityIncidentFilters,
+  JiraIssue,
+  JiraOptions,
+  RequestOptions,
+} from './types';
 import { JIRA_MANDATORY_FILTER, OPEN_ISSUES_CONFIG_PATH } from '../constants';
 import { ScorecardJiraAnnotations } from '../annotations';
-import { sanitizeValue, validateIdentifier, validateJQLValue } from './utils';
+import {
+  sanitizeValue,
+  toIsoDateTime,
+  toJiraDateTime,
+  validateIdentifier,
+  validateJQLValue,
+} from './utils';
 import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
 
-const { PROJECT_KEY, COMPONENT, LABEL, TEAM, CUSTOM_FILTER } =
-  ScorecardJiraAnnotations;
+const {
+  PROJECT_KEY,
+  INCIDENT_PROJECT_KEY,
+  COMPONENT,
+  LABEL,
+  TEAM,
+  CUSTOM_FILTER,
+} = ScorecardJiraAnnotations;
 
 export abstract class JiraClient {
   protected readonly options?: JiraOptions;
@@ -42,6 +60,8 @@ export abstract class JiraClient {
       };
     }
   }
+
+  protected abstract getSearchCountEndpoint(): string;
 
   protected abstract getSearchEndpoint(): string;
 
@@ -132,6 +152,30 @@ export abstract class JiraClient {
     return filters;
   }
 
+  protected getIncidentFiltersFromEntity(
+    entity: Entity,
+  ): JiraEntityIncidentFilters {
+    const annotations = entity?.metadata?.annotations || {};
+    const incidentProjectKey =
+      annotations[INCIDENT_PROJECT_KEY] ?? annotations[PROJECT_KEY];
+
+    if (!incidentProjectKey) {
+      throw new Error(
+        `Missing required '${INCIDENT_PROJECT_KEY}' or '${PROJECT_KEY}' annotation for entity '${
+          entity.metadata?.name || 'unknown'
+        }'`,
+      );
+    }
+
+    const sanitizedIncidentProjectKey = sanitizeValue(incidentProjectKey);
+    return {
+      project: `project = "${validateJQLValue(
+        sanitizedIncidentProjectKey,
+        annotations[INCIDENT_PROJECT_KEY] ? INCIDENT_PROJECT_KEY : PROJECT_KEY,
+      )}"`,
+    };
+  }
+
   protected buildJqlFilters(filters: JiraEntityFilters): string {
     const { customFilter: annotationCustomFilter } = filters;
     const { mandatoryFilter, customFilter: optionsCustomFilter } =
@@ -165,7 +209,7 @@ export abstract class JiraClient {
 
   public async getCountOpenIssues(entity: Entity): Promise<number> {
     const baseUrl = await this.getBaseUrl();
-    const countOpenIssuesUrl = `${baseUrl}${this.getSearchEndpoint()}`;
+    const countOpenIssuesUrl = `${baseUrl}${this.getSearchCountEndpoint()}`;
 
     const filters = this.getFiltersFromEntity(entity);
     const jql = this.buildJqlFilters(filters);
@@ -179,5 +223,72 @@ export abstract class JiraClient {
     });
 
     return this.extractIssueCountFromResponse(data);
+  }
+
+  public async getIncidentIssues(
+    entity: Entity,
+    options: {
+      from: string;
+      to: string;
+    },
+  ): Promise<JiraIssue[]> {
+    const baseUrl = await this.getBaseUrl();
+    const searchUrl = `${baseUrl}${this.getSearchEndpoint()}`;
+    const headers = await this.getAuthHeaders();
+
+    const filters = this.getIncidentFiltersFromEntity(entity);
+    const from = toJiraDateTime(options.from);
+    const to = toJiraDateTime(options.to);
+    const jql = `${filters.project} AND type = Incident AND created >= "${from}" AND created <= "${to}"`;
+
+    const data = await this.sendRequest({
+      method: 'POST',
+      url: searchUrl,
+      headers,
+      body: JSON.stringify({
+        jql,
+        fields: ['created', 'resolutiondate'],
+        maxResults: 1000,
+      }),
+    });
+
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      !('issues' in data) ||
+      !Array.isArray(data.issues)
+    ) {
+      throw new Error('Incorrect response data for Jira issues search');
+    }
+
+    return data.issues
+      .map(issue => {
+        if (
+          !issue ||
+          typeof issue !== 'object' ||
+          !('id' in issue) ||
+          typeof issue.id !== 'string' ||
+          !('fields' in issue) ||
+          !issue.fields ||
+          typeof issue.fields !== 'object' ||
+          !('created' in issue.fields) ||
+          typeof issue.fields.created !== 'string'
+        ) {
+          return undefined;
+        }
+        const resolutionDate =
+          'resolutiondate' in issue.fields &&
+          (typeof issue.fields.resolutiondate === 'string' ||
+            issue.fields.resolutiondate === null)
+            ? issue.fields.resolutiondate
+            : null;
+
+        return {
+          id: issue.id,
+          createdAt: toIsoDateTime(issue.fields.created),
+          resolutionDate: resolutionDate ? toIsoDateTime(resolutionDate) : null,
+        };
+      })
+      .filter((issue): issue is JiraIssue => Boolean(issue));
   }
 }

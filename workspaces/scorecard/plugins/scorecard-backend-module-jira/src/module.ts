@@ -17,8 +17,13 @@ import {
   coreServices,
   createBackendModule,
 } from '@backstage/backend-plugin-api';
-import { scorecardMetricsExtensionPoint } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import {
+  scorecardCollectorsExtensionPoint,
+  scorecardMetricsExtensionPoint,
+} from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
+import { JiraIncidentsCollector } from './collectors/JiraIncidentsCollector';
 import { JiraOpenIssuesProvider } from './metricProviders/JiraOpenIssuesProvider';
+import { JiraClientFactory } from './clients/JiraClientFactory';
 
 export const scorecardModuleJira = createBackendModule({
   pluginId: 'scorecard',
@@ -27,14 +32,18 @@ export const scorecardModuleJira = createBackendModule({
     reg.registerInit({
       deps: {
         auth: coreServices.auth,
+        collectors: scorecardCollectorsExtensionPoint,
         config: coreServices.rootConfig,
         discovery: coreServices.discovery,
         metrics: scorecardMetricsExtensionPoint,
       },
-      async init({ auth, config, discovery, metrics }) {
-        metrics.addMetricProvider(
-          JiraOpenIssuesProvider.fromConfig(config, { auth, discovery }),
-        );
+      async init({ auth, collectors, config, discovery, metrics }) {
+        const jiraClient = JiraClientFactory.fromConfig(config, {
+          auth,
+          discovery,
+        });
+        collectors.addCollector(new JiraIncidentsCollector(jiraClient));
+        metrics.addMetricProvider(new JiraOpenIssuesProvider(jiraClient));
       },
     });
   },

@@ -19,6 +19,10 @@ import { CLOUD_API_VERSION } from '../constants';
 
 export class JiraCloudClientStrategy extends JiraClient {
   protected getSearchEndpoint(): string {
+    return '/search/jql';
+  }
+
+  protected getSearchCountEndpoint(): string {
     return '/search/approximate-count';
   }
 

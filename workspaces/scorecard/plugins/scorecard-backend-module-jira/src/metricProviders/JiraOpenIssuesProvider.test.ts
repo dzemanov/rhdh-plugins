@@ -20,82 +20,59 @@ import { DEFAULT_NUMBER_THRESHOLDS } from '@red-hat-developer-hub/backstage-plug
 import { JiraOpenIssuesProvider } from './JiraOpenIssuesProvider';
 import { JiraClientFactory } from '../clients/JiraClientFactory';
 import { JiraClient } from '../clients/base';
-import { mockServices } from '@backstage/backend-test-utils';
 import {
   newEntityComponent,
   newMockRootConfig,
 } from '../../__fixtures__/testUtils';
 import { ScorecardJiraAnnotations } from '../annotations';
-import {
-  DirectConnectionStrategy,
-  ProxyConnectionStrategy,
-} from '../strategies/ConnectionStrategy';
+import { mockServices } from '@backstage/backend-test-utils';
 
 const { PROJECT_KEY } = ScorecardJiraAnnotations;
 
 jest.mock('../clients/JiraClientFactory');
-jest.mock('../strategies/ConnectionStrategy');
 
 const mockJiraClient = {
   getCountOpenIssues: jest.fn(),
 } as unknown as jest.Mocked<JiraClient>;
 
-const mockedJiraClientFactory = JiraClientFactory as jest.Mocked<
-  typeof JiraClientFactory
->;
-const mockedProxyConnectionStrategy =
-  ProxyConnectionStrategy as unknown as jest.Mocked<
-    typeof ProxyConnectionStrategy
-  >;
-const mockedDirectConnectionStrategy =
-  DirectConnectionStrategy as unknown as jest.Mocked<
-    typeof DirectConnectionStrategy
-  >;
-
 const mockEntity: Entity = newEntityComponent({
   [PROJECT_KEY]: 'TEST',
 });
 
-const mockAuthOptions = {
-  discovery: mockServices.discovery(),
-  auth: mockServices.auth(),
-};
-
 describe('JiraOpenIssuesProvider', () => {
   let mockConfig: Config;
+  let provider: JiraOpenIssuesProvider;
+  const mockAuthOptions = {
+    discovery: mockServices.discovery(),
+    auth: mockServices.auth(),
+  };
+  const mockedJiraClientFactory = JiraClientFactory as jest.Mocked<
+    typeof JiraClientFactory
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedJiraClientFactory.create.mockReturnValue(mockJiraClient);
     mockConfig = newMockRootConfig();
+    mockedJiraClientFactory.fromConfig.mockReturnValue(mockJiraClient);
+    provider = new JiraOpenIssuesProvider(
+      JiraClientFactory.fromConfig(mockConfig, mockAuthOptions),
+    );
   });
 
   describe('getProviderDatasourceId', () => {
     it('should return "jira"', () => {
-      const provider = JiraOpenIssuesProvider.fromConfig(
-        mockConfig,
-        mockAuthOptions,
-      );
       expect(provider.getProviderDatasourceId()).toEqual('jira');
     });
   });
 
   describe('getProviderId', () => {
     it('should return "jira.openIssues"', () => {
-      const provider = JiraOpenIssuesProvider.fromConfig(
-        mockConfig,
-        mockAuthOptions,
-      );
       expect(provider.getProviderId()).toEqual('jira.openIssues');
     });
   });
 
   describe('getMetrics', () => {
     it('should return correct metric metadata with threshold', () => {
-      const provider = JiraOpenIssuesProvider.fromConfig(
-        mockConfig,
-        mockAuthOptions,
-      );
       const metrics = provider.getMetrics();
 
       expect(metrics).toHaveLength(1);
@@ -113,59 +90,13 @@ describe('JiraOpenIssuesProvider', () => {
 
   describe('supportsEntity', () => {
     it('should return true when entity has project key annotation', () => {
-      const provider = JiraOpenIssuesProvider.fromConfig(
-        mockConfig,
-        mockAuthOptions,
-      );
       expect(provider.supportsEntity(mockEntity)).toBe(true);
     });
 
     it('should return false when entity does not have project key annotation', () => {
       const mockEmptyEntity: Entity = newEntityComponent({});
 
-      const provider = JiraOpenIssuesProvider.fromConfig(
-        mockConfig,
-        mockAuthOptions,
-      );
       expect(provider.supportsEntity(mockEmptyEntity)).toBe(false);
-    });
-  });
-
-  describe('fromConfig', () => {
-    it('should create provider with default thresholds on metric', () => {
-      const provider = JiraOpenIssuesProvider.fromConfig(
-        mockConfig,
-        mockAuthOptions,
-      );
-
-      expect(provider.getMetrics()[0].thresholds).toEqual(
-        DEFAULT_NUMBER_THRESHOLDS,
-      );
-    });
-
-    it('should create provider with proxy connection strategy when proxy path is configured', () => {
-      JiraOpenIssuesProvider.fromConfig(mockConfig, mockAuthOptions);
-      expect(mockedProxyConnectionStrategy).toHaveBeenCalledWith(
-        '/jira/api',
-        mockAuthOptions.auth,
-        mockAuthOptions.discovery,
-      );
-      expect(mockedJiraClientFactory.create).toHaveBeenCalledWith(
-        mockConfig,
-        expect.any(ProxyConnectionStrategy),
-      );
-    });
-
-    it('should create provider with direct connection strategy when proxy path is not configured', () => {
-      const config = newMockRootConfig({
-        jiraConfig: { proxyPath: undefined },
-      });
-      JiraOpenIssuesProvider.fromConfig(config, mockAuthOptions);
-      expect(mockedDirectConnectionStrategy).toHaveBeenCalledWith(
-        'https://example.com/api',
-        'Fds31dsF32',
-        'cloud',
-      );
     });
   });
 
@@ -173,10 +104,6 @@ describe('JiraOpenIssuesProvider', () => {
     it('should return the count of open issues when Jira client processed successfully', async () => {
       mockJiraClient.getCountOpenIssues.mockResolvedValue(5);
 
-      const provider = JiraOpenIssuesProvider.fromConfig(
-        mockConfig,
-        mockAuthOptions,
-      );
       const results = await provider.calculateMetrics(mockEntity);
 
       expect(results.get('jira.openIssues')).toBe(5);
@@ -193,10 +120,6 @@ describe('JiraOpenIssuesProvider', () => {
       });
 
       it('should propagate errors from Jira client', async () => {
-        const provider = JiraOpenIssuesProvider.fromConfig(
-          mockConfig,
-          mockAuthOptions,
-        );
         await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
           'Jira API error',
         );

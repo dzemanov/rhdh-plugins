@@ -60,7 +60,16 @@ describe('JiraCloudClient', () => {
   describe('getSearchEndpoint', () => {
     it('should return correct search endpoint', () => {
       const searchEndpoint = (jiraCloudClient as any).getSearchEndpoint();
-      expect(searchEndpoint).toEqual('/search/approximate-count');
+      expect(searchEndpoint).toEqual('/search/jql');
+    });
+  });
+
+  describe('getSearchCountEndpoint', () => {
+    it('should return correct search count endpoint', () => {
+      const searchCountEndpoint = (
+        jiraCloudClient as any
+      ).getSearchCountEndpoint();
+      expect(searchCountEndpoint).toEqual('/search/approximate-count');
     });
   });
 

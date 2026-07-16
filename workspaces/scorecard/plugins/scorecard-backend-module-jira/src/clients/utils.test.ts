@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { validateJQLValue, validateIdentifier, sanitizeValue } from './utils';
+import {
+  sanitizeValue,
+  toIsoDateTime,
+  toJiraDateTime,
+  validateIdentifier,
+  validateJQLValue,
+} from './utils';
 
 describe('utils', () => {
   describe('validateJQLValue', () => {
@@ -44,6 +50,22 @@ describe('utils', () => {
   describe('sanitizeValue', () => {
     it('should sanitize value', () => {
       expect(sanitizeValue('T"EST\\123')).toBe('T\\"EST\\\\123');
+    });
+  });
+
+  describe('toJiraDateTime', () => {
+    it('should convert ISO datetime to Jira datetime format', () => {
+      expect(toJiraDateTime('2026-06-01T10:05:00.000Z')).toBe(
+        '2026-06-01 10:05',
+      );
+    });
+  });
+
+  describe('toIsoDateTime', () => {
+    it('should normalize Jira datetime offset without colon', () => {
+      expect(toIsoDateTime('2026-07-15T18:21:34.862+0530')).toBe(
+        '2026-07-15T12:51:34.862Z',
+      );
     });
   });
 });

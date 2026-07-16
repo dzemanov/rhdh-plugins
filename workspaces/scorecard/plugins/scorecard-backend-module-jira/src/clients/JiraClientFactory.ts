@@ -15,18 +15,47 @@
  */
 
 import type { Config } from '@backstage/config';
+import type {
+  AuthService,
+  DiscoveryService,
+} from '@backstage/backend-plugin-api';
 import { JIRA_CONFIG_PATH } from '../constants';
 import { JiraClient } from '../clients/base';
 import { JiraDataCenterClientStrategy } from '../strategies/JiraDataCenterClientStrategy';
 import { JiraCloudClientStrategy } from '../strategies/JiraCloudClientStrategy';
-import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
+import {
+  ConnectionStrategy,
+  DirectConnectionStrategy,
+  ProxyConnectionStrategy,
+} from '../strategies/ConnectionStrategy';
+import { Product } from './types';
 
 export class JiraClientFactory {
-  static create(
+  static fromConfig(
     config: Config,
-    connectionStrategy: ConnectionStrategy,
+    options: {
+      auth: AuthService;
+      discovery: DiscoveryService;
+    },
   ): JiraClient {
     const jiraConfig = config.getConfig(JIRA_CONFIG_PATH);
+    const proxyPath = jiraConfig.getOptionalString('proxyPath');
+
+    let connectionStrategy: ConnectionStrategy;
+    if (proxyPath) {
+      connectionStrategy = new ProxyConnectionStrategy(
+        proxyPath,
+        options.auth,
+        options.discovery,
+      );
+    } else {
+      connectionStrategy = new DirectConnectionStrategy(
+        jiraConfig.getString('baseUrl'),
+        jiraConfig.getString('token'),
+        jiraConfig.getString('product') as Product,
+      );
+    }
+
     const product = jiraConfig.getString('product');
 
     switch (product) {

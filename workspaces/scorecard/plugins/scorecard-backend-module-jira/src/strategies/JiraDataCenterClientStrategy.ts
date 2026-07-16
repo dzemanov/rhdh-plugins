@@ -21,6 +21,9 @@ export class JiraDataCenterClientStrategy extends JiraClient {
   protected getSearchEndpoint(): string {
     return '/search';
   }
+  protected getSearchCountEndpoint(): string {
+    return '/search';
+  }
 
   protected buildSearchBody(jql: string): string {
     return JSON.stringify({ jql, fields: [], maxResults: 0 });

@@ -14,36 +14,23 @@
  * limitations under the License.
  */
 
-import type { Config } from '@backstage/config';
+import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 import type { Entity } from '@backstage/catalog-model';
-import { JIRA_CONFIG_PATH } from '../constants';
 import {
   DEFAULT_NUMBER_THRESHOLDS,
   Metric,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { MetricProvider } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import { JiraClient } from '../clients/base';
-import { JiraClientFactory } from '../clients/JiraClientFactory';
 import { ScorecardJiraAnnotations } from '../annotations';
-import {
-  type AuthService,
-  type DiscoveryService,
-} from '@backstage/backend-plugin-api';
-import {
-  ConnectionStrategy,
-  DirectConnectionStrategy,
-  ProxyConnectionStrategy,
-} from '../strategies/ConnectionStrategy';
-import { Product } from '../clients/types';
+import { JiraClient } from '../clients/base';
 
 const { PROJECT_KEY } = ScorecardJiraAnnotations;
-import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 
 export class JiraOpenIssuesProvider implements MetricProvider<'number'> {
   private readonly jiraClient: JiraClient;
 
-  private constructor(config: Config, connectionStrategy: ConnectionStrategy) {
-    this.jiraClient = JiraClientFactory.create(config, connectionStrategy);
+  public constructor(jiraClient: JiraClient) {
+    this.jiraClient = jiraClient;
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
@@ -76,35 +63,6 @@ export class JiraOpenIssuesProvider implements MetricProvider<'number'> {
 
   supportsEntity(entity: Entity): boolean {
     return entity.metadata.annotations?.[PROJECT_KEY] !== undefined;
-  }
-
-  static fromConfig(
-    config: Config,
-    options: {
-      auth: AuthService;
-      discovery: DiscoveryService;
-    },
-  ): JiraOpenIssuesProvider {
-    let connectionStrategy: ConnectionStrategy;
-
-    const jiraConfig = config.getConfig(JIRA_CONFIG_PATH);
-    const proxyPath = jiraConfig.getOptionalString('proxyPath');
-
-    if (proxyPath) {
-      connectionStrategy = new ProxyConnectionStrategy(
-        proxyPath,
-        options.auth,
-        options.discovery,
-      );
-    } else {
-      connectionStrategy = new DirectConnectionStrategy(
-        jiraConfig.getString('baseUrl'),
-        jiraConfig.getString('token'),
-        jiraConfig.getString('product') as Product,
-      );
-    }
-
-    return new JiraOpenIssuesProvider(config, connectionStrategy);
   }
 
   async calculateMetrics(entity: Entity): Promise<Map<string, number>> {

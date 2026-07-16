@@ -29,6 +29,16 @@ export interface JiraEntityFilters {
   customFilter?: string;
 }
 
+export interface JiraEntityIncidentFilters {
+  project: string;
+}
+
+export interface JiraIssue {
+  id: string;
+  createdAt: string;
+  resolutionDate: string | null;
+}
+
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 export type Header = Record<string, string> | {};

@@ -62,6 +62,40 @@ export interface Config {
           thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
+        median_time_to_resolve?: {
+          collectors?: {
+            incidents?: {
+              id: string;
+              input?: { [key: string]: unknown };
+            };
+          };
+          thresholds?: {
+            rules?: Array<{
+              key: string;
+              expression: string;
+            }>;
+          };
+          schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
+        };
+        change_failure_rate?: {
+          collectors?: {
+            deployments?: {
+              id: string;
+              input?: { [key: string]: unknown };
+            };
+            incidents?: {
+              id: string;
+              input?: { [key: string]: unknown };
+            };
+          };
+          thresholds?: {
+            rules?: Array<{
+              key: string;
+              expression: string;
+            }>;
+          };
+          schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
+        };
       };
     };
   };

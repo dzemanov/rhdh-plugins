@@ -112,10 +112,10 @@ Collectors in Scorecard are schema-validated at runtime. Any custom collector re
   - `baseCommitSha: string` (non-empty)
   - `headCommitSha: string` (non-empty)
 - **Output schema**
-  - `pullRequests: Array<{ id: string; firstCommitAt: string | null }>`
+  - `pullRequests: Array<{ id: string; firstCommitAt: string }>`
 - **Behavior**
   - The collector resolves commits between `baseCommitSha` and `headCommitSha`, collects associated pull requests for those commits, and de-duplicates pull requests by PR number.
-  - `firstCommitAt` is the timestamp of the first commit returned for that pull request
+  - `firstCommitAt` is the timestamp of the first commit returned for that pull request (Pull requests with missing `firstCommitAt` are skipped)
 
 For a complete collector implementation guide, see [collectors.md](../scorecard-backend/docs/collectors.md).
 

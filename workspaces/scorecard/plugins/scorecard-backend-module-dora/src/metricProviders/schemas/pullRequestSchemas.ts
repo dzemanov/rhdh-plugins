@@ -25,7 +25,7 @@ export const rangePullRequestsCollectorInputSchema = z
 
 const pullRequestSchema = z
   .object({
-    id: z.string(),
+    id: z.string().min(1),
     firstCommitAt: z.string().datetime(),
   })
   .passthrough();

@@ -16,6 +16,7 @@
 
 import type { Entity } from '@backstage/catalog-model';
 import { getEntitySourceLocation } from '@backstage/catalog-model';
+import type { LoggerService } from '@backstage/backend-plugin-api';
 import type { Config } from '@backstage/config';
 import type { Collector } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { z } from 'zod';
@@ -36,22 +37,25 @@ export class GithubDeploymentRangePullRequestsCollector
   static readonly outputSchema = z.object({
     pullRequests: z.array(
       z.object({
-        id: z.string(),
-        firstCommitAt: z.string().nullable(),
+        id: z.string().min(1),
+        firstCommitAt: z.string().datetime(),
       }),
     ),
   });
 
   private readonly client: GithubClient;
+  private readonly logger: LoggerService;
 
-  private constructor(config: Config) {
+  private constructor(config: Config, options: { logger: LoggerService }) {
     this.client = new GithubClient(config);
+    this.logger = options.logger;
   }
 
   static fromConfig(
     config: Config,
+    options: { logger: LoggerService },
   ): GithubDeploymentRangePullRequestsCollector {
-    return new GithubDeploymentRangePullRequestsCollector(config);
+    return new GithubDeploymentRangePullRequestsCollector(config, options);
   }
 
   getCollectorId(): string {
@@ -90,7 +94,7 @@ export class GithubDeploymentRangePullRequestsCollector
 
     const pullRequestsById = new Map<
       string,
-      { id: string; firstCommitAt: string | null }
+      { id: string; firstCommitAt: string }
     >();
     for (const commitSha of commitShas) {
       const commitPullRequests = await this.client.getCommitPullRequests(
@@ -102,6 +106,12 @@ export class GithubDeploymentRangePullRequestsCollector
       for (const pullRequest of commitPullRequests) {
         const pullRequestId = String(pullRequest.number);
         if (pullRequestsById.has(pullRequestId)) {
+          continue;
+        }
+        if (!pullRequest.firstCommitAt) {
+          this.logger.debug(
+            `Skipping pull request ${pullRequestId} for commit ${commitSha} due to missing firstCommitAt`,
+          );
           continue;
         }
 

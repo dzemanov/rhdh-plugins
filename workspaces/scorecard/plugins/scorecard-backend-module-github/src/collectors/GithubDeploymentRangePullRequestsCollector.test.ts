@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { mockServices } from '@backstage/backend-test-utils';
 import { ConfigReader } from '@backstage/config';
 import { GithubClient } from '../github/GithubClient';
 import { GithubDeploymentRangePullRequestsCollector } from './GithubDeploymentRangePullRequestsCollector';
@@ -33,8 +34,9 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
               number: 100,
               firstCommitAt: '2026-05-28T10:00:00.000Z',
             },
+            { number: 101, firstCommitAt: null },
             {
-              number: 101,
+              number: 102,
               firstCommitAt: '2026-05-30T10:00:00.000Z',
             },
           ];
@@ -42,11 +44,12 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
 
         return [
           {
-            number: 101,
+            number: 102,
             firstCommitAt: '2026-05-30T10:00:00.000Z',
           },
         ];
       });
+    const mockedLogger = mockServices.logger.mock();
 
     const collector = GithubDeploymentRangePullRequestsCollector.fromConfig(
       new ConfigReader({
@@ -59,6 +62,9 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
           ],
         },
       }),
+      {
+        logger: mockedLogger,
+      },
     );
 
     const result = await collector.collect({
@@ -86,11 +92,14 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
           firstCommitAt: '2026-05-28T10:00:00.000Z',
         },
         {
-          id: '101',
+          id: '102',
           firstCommitAt: '2026-05-30T10:00:00.000Z',
         },
       ],
     });
+    expect(mockedLogger.debug).toHaveBeenCalledWith(
+      'Skipping pull request 101 for commit sha-two due to missing firstCommitAt',
+    );
     expect(getCommitShasBetweenSpy).toHaveBeenCalledTimes(1);
     expect(getCommitPullRequestsSpy).toHaveBeenCalledTimes(2);
   });

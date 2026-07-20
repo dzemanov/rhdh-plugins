@@ -18,8 +18,8 @@ import { z } from 'zod';
 
 export const deploymentSchema = z
   .object({
-    id: z.string(),
-    commitSha: z.string(),
+    id: z.string().min(1),
+    commitSha: z.string().min(1),
     environment: z.string().optional(),
     createdAt: z.string().datetime(),
     result: z.enum(['success', 'failure', '']),

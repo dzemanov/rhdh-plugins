@@ -25,12 +25,14 @@ export function buildMockCollectorsService(options: {
     collectors.map(collector => [collector.getCollectorId(), collector]),
   );
 
-  const collect = jest.fn(async ({ collectorId, entity, input }) => {
+  const collect = jest.fn(async ({ collectorId, entity, input, contract }) => {
     const collector = collectorsById.get(collectorId);
     if (!collector) {
       throw new Error(`Unexpected collector id "${collectorId}"`);
     }
-    return collector.collect({ entity, input });
+
+    const output = await collector.collect({ entity, input });
+    return contract.outputSchema.parse(output);
   });
 
   const collectorsService = {

@@ -284,4 +284,31 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
 
     expect(leadTime).toBe(0);
   });
+
+  it('should fail when deployments are not sorted ascending by createdAt', async () => {
+    const unsortedDeployments: Deployment[] = [
+      {
+        id: '200',
+        commitSha: 'sha-later',
+        environment: 'production',
+        createdAt: '2026-06-08T12:00:00.000Z',
+        result: 'success',
+      },
+      {
+        id: '201',
+        commitSha: 'sha-earlier',
+        environment: 'production',
+        createdAt: '2026-06-06T12:00:00.000Z',
+        result: 'success',
+      },
+    ];
+
+    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+      deployments: unsortedDeployments,
+    });
+
+    await expect(provider.calculateMetric(mockEntity)).rejects.toThrow(
+      'Deployments must be sorted in ascending order by createdAt',
+    );
+  });
 });

@@ -38,7 +38,25 @@ export const deploymentsCollectorOutputSchema = z
   .object({
     deployments: z.array(deploymentSchema),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((value, ctx) => {
+    for (let i = 1; i < value.deployments.length; i++) {
+      const previous = value.deployments[i - 1];
+      const current = value.deployments[i];
+
+      if (
+        new Date(current.createdAt).getTime() <
+        new Date(previous.createdAt).getTime()
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['deployments', i, 'createdAt'],
+          message: 'Deployments must be sorted in ascending order by createdAt',
+        });
+        return;
+      }
+    }
+  });
 
 export type DeploymentsCollectorOutput = {
   deployments: Deployment[];

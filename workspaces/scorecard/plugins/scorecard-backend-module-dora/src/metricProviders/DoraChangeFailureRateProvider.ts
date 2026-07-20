@@ -149,7 +149,10 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
 
-    const deploymentsCollected = await this.collectorsService.collect({
+    const deploymentsCollected = await this.collectorsService.collect<
+      typeof deploymentsCollectorInputSchema,
+      typeof deploymentsCollectorOutputSchema
+    >({
       collectorId: this.deploymentsCollectorId,
       contract: {
         inputSchema: deploymentsCollectorInputSchema,
@@ -163,7 +166,10 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       },
     });
 
-    const incidentsCollected = await this.collectorsService.collect({
+    const incidentsCollected = await this.collectorsService.collect<
+      typeof incidentsCollectorInputSchema,
+      typeof incidentsCollectorOutputSchema
+    >({
       collectorId: this.incidentsCollectorId,
       contract: {
         inputSchema: incidentsCollectorInputSchema,

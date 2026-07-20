@@ -133,7 +133,10 @@ export class DoraMedianTimeToResolveProvider
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
 
-    const incidentsCollected = await this.collectorsService.collect({
+    const incidentsCollected = await this.collectorsService.collect<
+      typeof incidentsCollectorInputSchema,
+      typeof incidentsCollectorOutputSchema
+    >({
       collectorId: this.incidentsCollectorId,
       contract: {
         inputSchema: incidentsCollectorInputSchema,

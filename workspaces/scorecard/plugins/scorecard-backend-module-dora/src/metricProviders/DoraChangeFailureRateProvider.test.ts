@@ -227,7 +227,7 @@ describe('DoraChangeFailureRateProvider', () => {
     expect(cfr).toBe(50); // 1 failed pair out of 2 pairs
   });
 
-  it('should return 0 when there are fewer than two successful production deployments', async () => {
+  it('should return 0 when there are fewer than two deployments', async () => {
     jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
       deployments: [
         {
@@ -241,6 +241,75 @@ describe('DoraChangeFailureRateProvider', () => {
     });
 
     const cfr = await provider.calculateMetric(mockEntity);
+
+    expect(cfr).toBe(0);
+  });
+
+  it('should return 0 when there are fewer than two successful deployments', async () => {
+    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+      deployments: [
+        {
+          id: '100',
+          commitSha: 'sha-1',
+          environment: 'production',
+          createdAt: '2026-06-10T00:00:00.000Z',
+          result: 'success',
+        },
+        {
+          id: '101',
+          commitSha: 'sha-2',
+          environment: 'production',
+          createdAt: '2026-06-11T00:00:00.000Z',
+          result: 'failure',
+        },
+      ],
+    });
+
+    const cfr = await provider.calculateMetric(mockEntity);
+
+    expect(cfr).toBe(0);
+  });
+
+  it('should return 0 when there are fewer than two production deployments', async () => {
+    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+      deployments: [
+        {
+          id: '100',
+          commitSha: 'sha-1',
+          environment: 'production',
+          createdAt: '2026-06-10T00:00:00.000Z',
+          result: 'success',
+        },
+        {
+          id: '101',
+          commitSha: 'sha-2',
+          environment: 'demo-test',
+          createdAt: '2026-06-11T00:00:00.000Z',
+          result: 'success',
+        },
+      ],
+    });
+
+    const cfr = await provider.calculateMetric(mockEntity);
+
+    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+      deployments: [
+        {
+          id: '100',
+          commitSha: 'sha-1',
+          environment: 'production',
+          createdAt: '2026-06-10T00:00:00.000Z',
+          result: 'success',
+        },
+        {
+          id: '101',
+          commitSha: 'sha-2',
+          environment: 'test-demo',
+          createdAt: '2026-06-11T00:00:00.000Z',
+          result: 'success',
+        },
+      ],
+    });
 
     expect(cfr).toBe(0);
   });

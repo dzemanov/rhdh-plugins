@@ -64,36 +64,17 @@ export interface Config {
         };
         medianTimeToResolve?: {
           collectors?: {
-            incidents?: {
-              id: string;
-              input?: { [key: string]: unknown };
-            };
+            incidents?: CollectorInput;
           };
-          thresholds?: {
-            rules?: Array<{
-              key: string;
-              expression: string;
-            }>;
-          };
+          thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
         changeFailureRate?: {
           collectors?: {
-            deployments?: {
-              id: string;
-              input?: { [key: string]: unknown };
-            };
-            incidents?: {
-              id: string;
-              input?: { [key: string]: unknown };
-            };
+            deployments?: CollectorInput;
+            incidents?: CollectorInput;
           };
-          thresholds?: {
-            rules?: Array<{
-              key: string;
-              expression: string;
-            }>;
-          };
+          thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
       };

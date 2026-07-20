@@ -75,6 +75,12 @@ export const aggregationTypes: Readonly<{
   weightedStatusScore: 'weightedStatusScore';
 }>;
 
+// @public (undocumented)
+export type CollectorInput = {
+  id: string;
+  input?: Record<string, unknown>;
+};
+
 // @public
 export const DEFAULT_NUMBER_THRESHOLDS: ThresholdConfig;
 

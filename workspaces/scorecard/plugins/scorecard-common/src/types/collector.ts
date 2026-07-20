@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-export * from './Metric';
-export * from './threshold';
-export * from './aggregation';
-export * from './collector';
+/**
+ * @public
+ */
+export type CollectorInput = {
+  id: string;
+  input?: Record<string, unknown>;
+};

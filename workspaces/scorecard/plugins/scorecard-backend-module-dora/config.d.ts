@@ -15,6 +15,10 @@
  */
 
 import { SchedulerServiceTaskScheduleDefinitionConfig } from '@backstage/backend-plugin-api';
+import {
+  CollectorInput,
+  ThresholdConfig,
+} from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 
 export interface Config {
   /** Configuration for scorecard dora plugin */
@@ -23,36 +27,17 @@ export interface Config {
       dora?: {
         deploymentFrequency?: {
           collectors?: {
-            deployments?: {
-              id: string;
-              input?: { [key: string]: unknown };
-            };
+            deployments?: CollectorInput;
           };
-          thresholds?: {
-            rules?: Array<{
-              key: string;
-              expression: string;
-            }>;
-          };
+          thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
         medianLeadTimeForChanges?: {
           collectors?: {
-            deployments?: {
-              id: string;
-              input?: { [key: string]: unknown };
-            };
-            deploymentRangePullRequests?: {
-              id: string;
-              input?: { [key: string]: unknown };
-            };
+            deployments?: CollectorInput;
+            deploymentRangePullRequests?: CollectorInput;
           };
-          thresholds?: {
-            rules?: Array<{
-              key: string;
-              expression: string;
-            }>;
-          };
+          thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
       };

@@ -1,0 +1,98 @@
+# DORA Deployment Frequency
+
+- **Metric ID**: `dora.deploymentFrequency`
+- **Type**: Number
+- **Unit**: deployments per week
+- **Computation window**: 30 days
+
+The metric counts successful deployments to production (or unknown environment) and normalizes that count to weekly frequency.
+
+## Default thresholds
+
+Thresholds are applied to the computed `deployments/week` value:
+
+- `elite`: `>=7`
+- `medium`: `1-7`
+- `low`: `<1`
+
+Configure thresholds via:
+
+- `scorecard.plugins.dora.deploymentFrequency.thresholds`
+
+## Collectors
+
+DORA module uses [**collectors**](../scorecard-backend/docs/collectors.md) – reusable components designed to gather data from various datasources, such as Jira or GitHub. You can create your custom data collector to tailor data collection for your specific setup.
+
+This metric requires [deployments collector](#deployments-collector).
+
+### Deployments collector
+
+Collects deployments.
+
+Available deployment collectors:
+
+- `github:deployments` (default)
+- `github:deploymentWorkflowRuns`
+
+For more information on the collectors above, see deployment collectors details in [scorecard-backend-module-github README](../../../scorecard-backend-module-github/README.md).
+
+**Important:** These collectors, even the default one, require that you have `@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-github` installed.
+
+#### Deployments collector contract
+
+If you're implementing a custom _Deployments_ collector, it must adhere to the following contract:
+
+Required input:
+
+- `from: string` (ISO datetime)
+- `to: string` (ISO datetime)
+
+Required output:
+
+- `deployments: Array<{ id: string; commitSha: string; environment?: string; createdAt: string; result: 'success' | 'failure' | '' }>`
+
+## Collector configuration
+
+### Use GitHub deployments collector (default)
+
+- Default, no need to provide configuration.
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      deploymentFrequency:
+        collectors:
+          deployments:
+            id: github:deployments
+```
+
+### Use GitHub deployment workflow runs collector
+
+When using workflow runs, provide `workflowName` as extra collector input.
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      deploymentFrequency:
+        collectors:
+          deployments:
+            id: github:deploymentWorkflowRuns
+            input:
+              workflowName: Custom deployment
+```
+
+### Use custom deployments collector
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      deploymentFrequency:
+        collectors:
+          deployments:
+            id: customDatasource:deployments
+            input:
+              # optional collector-specific extra input
+```

@@ -204,7 +204,15 @@ describe('GithubClient', () => {
               nodes: [
                 {
                   number: 123,
-                  mergedAt: '2026-06-01T12:00:00.000Z',
+                  commits: {
+                    nodes: [
+                      {
+                        commit: {
+                          committedDate: '2026-05-28T08:30:00.000Z',
+                        },
+                      },
+                    ],
+                  },
                 },
               ],
             },
@@ -221,7 +229,7 @@ describe('GithubClient', () => {
       expect(pullRequests).toEqual([
         {
           number: 123,
-          mergedAt: '2026-06-01T12:00:00.000Z',
+          firstCommitAt: '2026-05-28T08:30:00.000Z',
         },
       ]);
       expect(mockedGraphqlClient).toHaveBeenCalledTimes(1);

@@ -31,11 +31,11 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
           return [
             {
               number: 100,
-              mergedAt: '2026-06-01T12:00:00.000Z',
+              firstCommitAt: '2026-05-28T10:00:00.000Z',
             },
             {
               number: 101,
-              mergedAt: '2026-06-02T12:00:00.000Z',
+              firstCommitAt: '2026-05-30T10:00:00.000Z',
             },
           ];
         }
@@ -43,7 +43,7 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
         return [
           {
             number: 101,
-            mergedAt: '2026-06-02T12:00:00.000Z',
+            firstCommitAt: '2026-05-30T10:00:00.000Z',
           },
         ];
       });
@@ -83,11 +83,11 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
       pullRequests: [
         {
           id: '100',
-          mergedAt: '2026-06-01T12:00:00.000Z',
+          firstCommitAt: '2026-05-28T10:00:00.000Z',
         },
         {
           id: '101',
-          mergedAt: '2026-06-02T12:00:00.000Z',
+          firstCommitAt: '2026-05-30T10:00:00.000Z',
         },
       ],
     });

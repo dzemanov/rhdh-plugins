@@ -37,7 +37,7 @@ export class GithubDeploymentRangePullRequestsCollector
     pullRequests: z.array(
       z.object({
         id: z.string(),
-        mergedAt: z.string().nullable(),
+        firstCommitAt: z.string().nullable(),
       }),
     ),
   });
@@ -90,7 +90,7 @@ export class GithubDeploymentRangePullRequestsCollector
 
     const pullRequestsById = new Map<
       string,
-      { id: string; mergedAt: string | null }
+      { id: string; firstCommitAt: string | null }
     >();
     for (const commitSha of commitShas) {
       const commitPullRequests = await this.client.getCommitPullRequests(
@@ -107,7 +107,7 @@ export class GithubDeploymentRangePullRequestsCollector
 
         pullRequestsById.set(pullRequestId, {
           id: pullRequestId,
-          mergedAt: pullRequest.mergedAt,
+          firstCommitAt: pullRequest.firstCommitAt,
         });
       }
     }

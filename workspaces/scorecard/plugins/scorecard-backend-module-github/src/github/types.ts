@@ -31,7 +31,7 @@ export type GithubDeployment = {
 
 export type GithubPullRequest = {
   number: number;
-  mergedAt: string | null;
+  firstCommitAt: string | null;
 };
 
 export type GithubWorkflowRun = {
@@ -68,7 +68,13 @@ export type GithubCommitPullRequestsQueryResponse = GraphQlQueryResponseData & {
       associatedPullRequests?: {
         nodes: Array<{
           number: number;
-          mergedAt?: string | null;
+          commits?: {
+            nodes: Array<{
+              commit?: {
+                committedDate?: string | null;
+              } | null;
+            }>;
+          } | null;
         }>;
       };
     } | null;

@@ -18,8 +18,38 @@ import { ConfigReader } from '@backstage/config';
 import { GithubClient } from '../github/GithubClient';
 import { GithubDeploymentWorkflowRunsCollector } from './GithubDeploymentWorkflowRunsCollector';
 
+const testEntity = {
+  apiVersion: 'backstage.io/v1alpha1',
+  kind: 'Component',
+  metadata: {
+    name: 'service-a',
+    annotations: {
+      'github.com/project-slug': 'owner/repo',
+      'backstage.io/source-location': 'url:https://github.com/owner/repo',
+    },
+  },
+};
+
 describe('GithubDeploymentWorkflowRunsCollector', () => {
-  it('collects deployments from workflow runs', async () => {
+  let collector: GithubDeploymentWorkflowRunsCollector;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    collector = GithubDeploymentWorkflowRunsCollector.fromConfig(
+      new ConfigReader({
+        integrations: {
+          github: [
+            {
+              host: 'github.com',
+              token: 'dummy-token',
+            },
+          ],
+        },
+      }),
+    );
+  });
+
+  it('collects deployments from workflow runs with success conclusion', async () => {
     const getWorkflowRunsSpy = jest
       .spyOn(GithubClient.prototype, 'getWorkflowRuns')
       .mockResolvedValue([
@@ -32,33 +62,10 @@ describe('GithubDeploymentWorkflowRunsCollector', () => {
         },
       ]);
 
-    const collector = GithubDeploymentWorkflowRunsCollector.fromConfig(
-      new ConfigReader({
-        integrations: {
-          github: [
-            {
-              host: 'github.com',
-              token: 'dummy-token',
-            },
-          ],
-        },
-      }),
-    );
-
     const result = await collector.collect({
-      entity: {
-        apiVersion: 'backstage.io/v1alpha1',
-        kind: 'Component',
-        metadata: {
-          name: 'service-a',
-          annotations: {
-            'github.com/project-slug': 'owner/repo',
-            'backstage.io/source-location': 'url:https://github.com/owner/repo',
-          },
-        },
-      },
+      entity: testEntity,
       input: {
-        workflowName: 'deployment.yml',
+        workflowName: 'Custom deployment',
         from: '2026-06-01T00:00:00.000Z',
         to: '2026-06-08T00:00:00.000Z',
       },
@@ -71,6 +78,41 @@ describe('GithubDeploymentWorkflowRunsCollector', () => {
           commitSha: 'sha-one',
           createdAt: '2026-06-02T00:00:00.000Z',
           result: 'success',
+        },
+      ],
+    });
+    expect(getWorkflowRunsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('collects deployments from workflow runs with failure conclusion', async () => {
+    const getWorkflowRunsSpy = jest
+      .spyOn(GithubClient.prototype, 'getWorkflowRuns')
+      .mockResolvedValue([
+        {
+          id: 2,
+          sha: 'sha-timeout',
+          createdAt: '2026-06-03T00:00:00.000Z',
+          status: 'completed',
+          conclusion: 'timed_out',
+        },
+      ]);
+
+    const result = await collector.collect({
+      entity: testEntity,
+      input: {
+        workflowName: 'Custom deployment',
+        from: '2026-06-01T00:00:00.000Z',
+        to: '2026-06-08T00:00:00.000Z',
+      },
+    });
+
+    expect(result).toEqual({
+      deployments: [
+        {
+          id: '2',
+          commitSha: 'sha-timeout',
+          createdAt: '2026-06-03T00:00:00.000Z',
+          result: 'failure',
         },
       ],
     });

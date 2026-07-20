@@ -222,7 +222,13 @@ export class GithubClient {
               associatedPullRequests(first: 50) {
                 nodes {
                   number
-                  mergedAt
+                  commits(first: 1) {
+                    nodes {
+                      commit {
+                        committedDate
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -245,7 +251,7 @@ export class GithubClient {
 
     return pullRequests.map(pr => ({
       number: pr.number,
-      mergedAt: pr.mergedAt ?? null,
+      firstCommitAt: pr.commits?.nodes[0]?.commit?.committedDate ?? null,
     }));
   }
 

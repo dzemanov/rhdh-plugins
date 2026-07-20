@@ -26,7 +26,7 @@ export const rangePullRequestsCollectorInputSchema = z
 const pullRequestSchema = z
   .object({
     id: z.string(),
-    mergedAt: z.string().datetime(),
+    firstCommitAt: z.string().datetime(),
   })
   .passthrough();
 export type PullRequest = z.infer<typeof pullRequestSchema>;

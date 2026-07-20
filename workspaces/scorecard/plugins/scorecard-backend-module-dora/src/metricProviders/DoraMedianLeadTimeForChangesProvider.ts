@@ -217,12 +217,14 @@ export class DoraMedianLeadTimeForChangesProvider
 
       const deployedAtTimestamp = new Date(deployment.createdAt).getTime();
       for (const pullRequest of pullRequestsCollected.pullRequests) {
-        const mergedAtTimestamp = new Date(pullRequest.mergedAt).getTime();
-        if (deployedAtTimestamp < mergedAtTimestamp) {
+        const firstCommitAtTimestamp = new Date(
+          pullRequest.firstCommitAt,
+        ).getTime();
+        if (deployedAtTimestamp < firstCommitAtTimestamp) {
           continue;
         }
         leadTimeHours.push(
-          (deployedAtTimestamp - mergedAtTimestamp) / 3_600_000,
+          (deployedAtTimestamp - firstCommitAtTimestamp) / 3_600_000,
         );
       }
     }

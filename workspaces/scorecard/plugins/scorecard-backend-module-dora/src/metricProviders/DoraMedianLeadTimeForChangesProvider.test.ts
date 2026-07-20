@@ -49,11 +49,11 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
   const pullRequests: PullRequest[] = [
     {
       id: '123',
-      mergedAt: '2026-06-05T12:00:00.000Z', // 72h from sha-current createdAt
+      firstCommitAt: '2026-06-05T12:00:00.000Z', // 72h from sha-current createdAt
     },
     {
       id: '124',
-      mergedAt: '2026-06-07T12:00:00.000Z', // 24h from sha-current createdAt
+      firstCommitAt: '2026-06-07T12:00:00.000Z', // 24h from sha-current createdAt
     },
   ];
 
@@ -224,12 +224,14 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       .mocked(rangePullRequestsCollector.collect)
       .mockResolvedValueOnce({
         pullRequests: [
-          { id: '501', mergedAt: '2026-06-10T18:00:00.000Z' }, // 6h from sha-2 createdAt
-          { id: '502', mergedAt: '2026-06-10T12:00:00.000Z' }, // 12h from sha-2 createdAt
+          { id: '501', firstCommitAt: '2026-06-10T18:00:00.000Z' }, // 6h from sha-2 createdAt
+          { id: '502', firstCommitAt: '2026-06-10T12:00:00.000Z' }, // 12h from sha-2 createdAt
         ],
       })
       .mockResolvedValueOnce({
-        pullRequests: [{ id: '503', mergedAt: '2026-06-11T12:00:00.000Z' }], // 12h from sha-3 createdAt
+        pullRequests: [
+          { id: '503', firstCommitAt: '2026-06-11T12:00:00.000Z' },
+        ], // 12h from sha-3 createdAt
       });
 
     const leadTime = await provider.calculateMetric(mockEntity);

@@ -18,8 +18,38 @@ import { ConfigReader } from '@backstage/config';
 import { GithubClient } from '../github/GithubClient';
 import { GithubDeploymentsCollector } from './GithubDeploymentsCollector';
 
+const testEntity = {
+  apiVersion: 'backstage.io/v1alpha1',
+  kind: 'Component',
+  metadata: {
+    name: 'service-a',
+    annotations: {
+      'github.com/project-slug': 'owner/repo',
+      'backstage.io/source-location': 'url:https://github.com/owner/repo',
+    },
+  },
+};
+
 describe('GithubDeploymentsCollector', () => {
-  it('collects deployments for entity and time window', async () => {
+  let collector: GithubDeploymentsCollector;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    collector = GithubDeploymentsCollector.fromConfig(
+      new ConfigReader({
+        integrations: {
+          github: [
+            {
+              host: 'github.com',
+              token: 'dummy-token',
+            },
+          ],
+        },
+      }),
+    );
+  });
+
+  it('collects deployments for entity and time window with success conclusion', async () => {
     const getDeploymentsSpy = jest
       .spyOn(GithubClient.prototype, 'getDeployments')
       .mockResolvedValue([
@@ -32,31 +62,8 @@ describe('GithubDeploymentsCollector', () => {
         },
       ]);
 
-    const collector = GithubDeploymentsCollector.fromConfig(
-      new ConfigReader({
-        integrations: {
-          github: [
-            {
-              host: 'github.com',
-              token: 'dummy-token',
-            },
-          ],
-        },
-      }),
-    );
-
     const result = await collector.collect({
-      entity: {
-        apiVersion: 'backstage.io/v1alpha1',
-        kind: 'Component',
-        metadata: {
-          name: 'service-a',
-          annotations: {
-            'github.com/project-slug': 'owner/repo',
-            'backstage.io/source-location': 'url:https://github.com/owner/repo',
-          },
-        },
-      },
+      entity: testEntity,
       input: {
         from: '2026-06-01T00:00:00.000Z',
         to: '2026-06-08T00:00:00.000Z',
@@ -71,6 +78,41 @@ describe('GithubDeploymentsCollector', () => {
           environment: 'development',
           createdAt: '2026-06-02T00:00:00.000Z',
           result: 'success',
+        },
+      ],
+    });
+    expect(getDeploymentsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('collects deployments for entity and time window with failure conclusion', async () => {
+    const getDeploymentsSpy = jest
+      .spyOn(GithubClient.prototype, 'getDeployments')
+      .mockResolvedValue([
+        {
+          id: 2,
+          sha: 'sha-two',
+          createdAt: '2026-06-03T00:00:00.000Z',
+          environment: 'production',
+          status: 'ERROR',
+        },
+      ]);
+
+    const result = await collector.collect({
+      entity: testEntity,
+      input: {
+        from: '2026-06-01T00:00:00.000Z',
+        to: '2026-06-08T00:00:00.000Z',
+      },
+    });
+
+    expect(result).toEqual({
+      deployments: [
+        {
+          id: '2',
+          commitSha: 'sha-two',
+          environment: 'production',
+          createdAt: '2026-06-03T00:00:00.000Z',
+          result: 'failure',
         },
       ],
     });

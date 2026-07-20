@@ -131,7 +131,10 @@ export class DoraDeploymentFrequencyProvider
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
 
-    const deploymentsCollected = await this.collectorsService.collect({
+    const deploymentsCollected = await this.collectorsService.collect<
+      typeof deploymentsCollectorInputSchema,
+      typeof deploymentsCollectorOutputSchema
+    >({
       collectorId: this.deploymentsCollectorId,
       contract: {
         inputSchema: deploymentsCollectorInputSchema,

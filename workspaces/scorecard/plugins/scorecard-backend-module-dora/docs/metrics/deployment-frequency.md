@@ -5,6 +5,8 @@
 - **Unit**: deployments per week
 - **Computation window**: 30 days
 
+Deployment Frequency measures how often a team successfully deploys changes to production.
+
 The metric counts successful deployments to production (or unknown environment) and normalizes that count to weekly frequency.
 
 ## Default thresholds
@@ -37,6 +39,14 @@ Available deployment collectors:
 For more information on the collectors above, see deployment collectors details in [scorecard-backend-module-github README](../../../scorecard-backend-module-github/README.md).
 
 **Important:** These collectors, even the default one, require that you have `@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-github` installed.
+
+Required entity annotations for default GitHub deployment collectors:
+
+```yaml
+metadata:
+  annotations:
+    github.com/project-slug: myorg/my-service
+```
 
 #### Deployments collector contract
 

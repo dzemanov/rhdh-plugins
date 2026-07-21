@@ -5,6 +5,8 @@
 - **Unit**: hours
 - **Computation window**: 30 days
 
+Median Lead Time for Changes measures how long changes typically take to move from code to production.
+
 The metric computes lead time for changes from pull request first commit timestamp to deployment timestamp, then returns the median.
 Deployments are processed as chronological pairs (`previousDeployment` -> `currentDeployment`), and pull requests are resolved for the commit range between those two deployment SHAs. For each pull request in that range, lead time is calculated as `currentDeployment.createdAt - pullRequest.firstCommitAt`, and all collected lead times are used to compute the median.
 
@@ -43,6 +45,14 @@ For more information on the collectors above, see deployment collectors details 
 
 **Important:** These collectors, even the default one, require that you have `@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-github` installed.
 
+Required entity annotations for default GitHub deployment collectors:
+
+```yaml
+metadata:
+  annotations:
+    github.com/project-slug: myorg/my-service
+```
+
 #### Deployments collector contract
 
 If you're implementing a custom _Deployments_ collector, it must adhere to the following contract:
@@ -71,6 +81,14 @@ Available pull-request-range collectors:
 For more information on the collector above, see collector details in [scorecard-backend-module-github README](../../../scorecard-backend-module-github/README.md).
 
 **Important:** This collector requires that you have `@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-github` installed.
+
+Required entity annotations for default `github:deploymentRangePullRequests` collector:
+
+```yaml
+metadata:
+  annotations:
+    github.com/project-slug: myorg/my-service
+```
 
 #### Pull requests between commits collector contract
 

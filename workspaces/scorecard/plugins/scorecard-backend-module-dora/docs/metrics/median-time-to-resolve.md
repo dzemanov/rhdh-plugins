@@ -1,0 +1,94 @@
+# DORA Median Time to Resolve
+
+- **Metric ID**: `dora.medianTimeToResolve`
+- **Type**: Number
+- **Unit**: hours
+- **Computation window**: 30 days
+
+Median Time to Resolve measures how quickly is service restored after incidents occur.
+
+The metric computes median incident recovery time from `createdAt` to `resolutionDate` for incidents in the last 30 days.
+Only resolved incidents are considered.
+
+## Default thresholds
+
+Thresholds are applied to the computed value in hours:
+
+- `elite`: `<1`
+- `medium`: `1-24`
+- `low`: `>24`
+
+Configure thresholds via:
+
+- `scorecard.plugins.dora.medianTimeToResolve.thresholds`
+
+## Collectors
+
+DORA module uses [**collectors**](../../../scorecard-backend/docs/collectors.md) - reusable components designed to gather data from various datasources, such as Jira or GitHub. You can create your custom data collector to tailor data collection for your specific setup.
+
+This metric requires [Incidents collector](#incidents-collector).
+
+### Incidents collector
+
+Collects incidents in a time window.
+
+Available incidents collectors:
+
+- `jira:incidents` (default)
+
+For more information on the collector above, see incident collector details in [scorecard-backend-module-jira README](../../../scorecard-backend-module-jira/README.md).
+
+**Important:** This collector requires that you have `@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-jira` installed.
+
+Required entity annotations for the default `jira:incidents` collector:
+
+- `jira/incident-project-key` (preferred), or
+- `jira/project-key` (fallback when `jira/incident-project-key` is not set)
+
+#### Incidents collector contract
+
+If you're implementing a custom _Incidents_ collector, it must adhere to the following contract:
+
+Required input:
+
+- `from: string` (ISO datetime)
+- `to: string` (ISO datetime)
+
+Required output:
+
+- `incidents: Array<{ id: string; createdAt: string; resolutionDate: string | null }>`
+
+`createdAt` must be a valid ISO datetime.
+`resolutionDate` must be `null` for unresolved incidents or a valid ISO datetime for resolved incidents.
+
+Collector-specific extra input fields are allowed, but they do not replace required contract fields.
+
+## Collector configuration
+
+### Use default Jira incidents collector
+
+- Default, no need to provide configuration.
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      medianTimeToResolve:
+        collectors:
+          incidents:
+            id: jira:incidents
+```
+
+### Use custom incidents collector
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      medianTimeToResolve:
+        collectors:
+          incidents:
+            id: customDatasource:incidents
+            input:
+              # optional collector-specific extra input
+```

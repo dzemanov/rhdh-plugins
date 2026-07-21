@@ -184,6 +184,53 @@ This metric counts all jira issues that match the filter condition specified in 
 - **Type**: `Number`
 - **Datasource**: `jira`
 
+## Collectors
+
+This module registers collectors to collect data from Jira to be used by composite metric providers:
+
+- `scorecard-backend-module-dora`:
+
+  - `jira:incidents`
+
+### Collector contracts
+
+Collectors in Scorecard are schema-validated at runtime. Any custom collector replacing a Jira collector must return data that conforms to the same contract expected by consumers.
+
+`jira:incidents`
+
+- **Input schema**
+  - `from: string` (ISO datetime)
+  - `to: string` (ISO datetime)
+- **Output schema**
+  - `incidents: Array<{ id: string; createdAt: string; resolutionDate: string | null }>`
+- **Annotation requirements**
+  - Uses `jira/incident-project-key` when present
+  - Falls back to `jira/project-key` when `jira/incident-project-key` is not set
+  - Requires at least one of those annotations on the entity
+- **Behavior**
+  - Collects Jira issues with `type = Incident`
+
+Example entity annotatons for `jira:incidents` collector:
+
+```yaml
+# catalog-info.yaml
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: my-service
+  annotations:
+    # Jira project for incident collection:
+    jira/incident-project-key: INCIDENTS
+    # Optional fallback when incident-project-key is not set:
+    jira/project-key: PROJECT
+spec:
+  type: service
+  lifecycle: production
+  owner: team-a
+```
+
+For a complete collector implementation guide, see [collectors.md](../scorecard-backend/docs/collectors.md).
+
 ## Default thresholds
 
 Default thresholds for `jira.openIssues`:

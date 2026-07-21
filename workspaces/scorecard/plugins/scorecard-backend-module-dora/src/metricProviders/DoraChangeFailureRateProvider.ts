@@ -215,20 +215,13 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       const nextDeploymentCreatedAt = new Date(
         nextDeployment.createdAt,
       ).getTime();
-      if (
-        Number.isNaN(deploymentCreatedAt) ||
-        Number.isNaN(nextDeploymentCreatedAt) ||
-        nextDeploymentCreatedAt <= deploymentCreatedAt
-      ) {
+      if (nextDeploymentCreatedAt <= deploymentCreatedAt) {
         continue;
       }
 
       evaluatedDeployments += 1;
       const hasIncident = incidentsCollected.incidents.some(incident => {
         const incidentCreatedAt = new Date(incident.createdAt).getTime();
-        if (Number.isNaN(incidentCreatedAt)) {
-          return false;
-        }
         return (
           incidentCreatedAt >= deploymentCreatedAt &&
           incidentCreatedAt < nextDeploymentCreatedAt

@@ -159,11 +159,7 @@ export class DoraMedianTimeToResolveProvider
       const resolutionDateTimestamp = new Date(
         incident.resolutionDate,
       ).getTime();
-      if (
-        Number.isNaN(createdAtTimestamp) ||
-        Number.isNaN(resolutionDateTimestamp) ||
-        resolutionDateTimestamp < createdAtTimestamp
-      ) {
+      if (resolutionDateTimestamp < createdAtTimestamp) {
         continue;
       }
       recoveryHours.push(

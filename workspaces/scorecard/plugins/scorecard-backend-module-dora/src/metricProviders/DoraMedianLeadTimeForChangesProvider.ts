@@ -114,7 +114,7 @@ export class DoraMedianLeadTimeForChangesProvider
       id: this.getProviderId(),
       title: 'DORA - Median Lead Time for Changes',
       description:
-        'Measures the median time from merge commit to production deployment over the past 30 days. Elite performers have a lead time of less than one hour',
+        'Measures the time from code commit to production deployment over the past 30 days. Elite performers have a lead time of less than one hour',
       type: this.getMetricType(),
       history: true,
     };

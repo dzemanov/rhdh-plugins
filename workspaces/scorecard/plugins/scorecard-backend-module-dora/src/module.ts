@@ -24,7 +24,7 @@ import {
 import { DoraChangeFailureRateProvider } from './metricProviders/DoraChangeFailureRateProvider';
 import { DoraDeploymentFrequencyProvider } from './metricProviders/DoraDeploymentFrequencyProvider';
 import { DoraMedianLeadTimeForChangesProvider } from './metricProviders/DoraMedianLeadTimeForChangesProvider';
-import { DoraMedianTimeToResolveProvider } from './metricProviders/DoraMedianTimeToResolveProvider';
+import { DoraMeanTimeToRestoreProvider } from './metricProviders/DoraMeanTimeToRestoreProvider';
 
 export const scorecardModuleDora = createBackendModule({
   pluginId: 'scorecard',
@@ -46,7 +46,7 @@ export const scorecardModuleDora = createBackendModule({
             collectorsService,
             logger,
           }),
-          DoraMedianTimeToResolveProvider.fromConfig(config, {
+          DoraMeanTimeToRestoreProvider.fromConfig(config, {
             collectorsService,
           }),
           DoraChangeFailureRateProvider.fromConfig(config, {

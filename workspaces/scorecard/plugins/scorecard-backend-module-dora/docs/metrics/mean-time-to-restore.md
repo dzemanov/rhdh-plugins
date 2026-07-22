@@ -1,13 +1,13 @@
-# DORA Median Time to Resolve
+# DORA Mean Time to Restore
 
-- **Metric ID**: `dora.medianTimeToResolve`
+- **Metric ID**: `dora.meanTimeToRestore`
 - **Type**: Number
 - **Unit**: hours
 - **Computation window**: 30 days
 
-Median Time to Resolve measures how quickly is service restored after incidents occur.
+Mean Time to Restore measures how quickly is service restored after incidents occur.
 
-The metric computes median incident recovery time from `createdAt` to `resolutionDate` for incidents in the last 30 days.
+The metric computes mean incident recovery time from `createdAt` to `resolutionDate` for incidents in the last 30 days.
 Only resolved incidents are considered.
 
 ## Default thresholds
@@ -20,7 +20,7 @@ Thresholds are applied to the computed value in hours:
 
 Configure thresholds via:
 
-- `scorecard.plugins.dora.medianTimeToResolve.thresholds`
+- `scorecard.plugins.dora.meanTimeToRestore.thresholds`
 
 ## Collectors
 
@@ -73,7 +73,7 @@ Collector-specific extra input fields are allowed, but they do not replace requi
 scorecard:
   plugins:
     dora:
-      medianTimeToResolve:
+      meanTimeToRestore:
         collectors:
           incidents:
             id: jira:incidents
@@ -85,7 +85,7 @@ scorecard:
 scorecard:
   plugins:
     dora:
-      medianTimeToResolve:
+      meanTimeToRestore:
         collectors:
           incidents:
             id: customDatasource:incidents

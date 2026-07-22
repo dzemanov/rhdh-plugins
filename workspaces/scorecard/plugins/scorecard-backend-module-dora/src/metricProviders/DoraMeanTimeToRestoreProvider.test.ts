@@ -15,7 +15,7 @@
  */
 
 import { ConfigReader } from '@backstage/config';
-import { DoraMedianTimeToResolveProvider } from './DoraMedianTimeToResolveProvider';
+import { DoraMeanTimeToRestoreProvider } from './DoraMeanTimeToRestoreProvider';
 import {
   buildMockCollectorsService,
   buildMockIncidentsCollector,
@@ -23,13 +23,13 @@ import {
 } from './__fixtures__';
 import { DORA_DEFAULT_INCIDENTS_COLLECTOR_ID } from '../constants';
 
-describe('DoraMedianTimeToResolveProvider', () => {
+describe('DoraMeanTimeToRestoreProvider', () => {
   let incidentsCollector: ReturnType<typeof buildMockIncidentsCollector>;
   let collectorsService: ReturnType<
     typeof buildMockCollectorsService
   >['collectorsService'];
   let collect: ReturnType<typeof buildMockCollectorsService>['collect'];
-  let provider: DoraMedianTimeToResolveProvider;
+  let provider: DoraMeanTimeToRestoreProvider;
 
   beforeEach(() => {
     incidentsCollector = buildMockIncidentsCollector({
@@ -45,12 +45,9 @@ describe('DoraMedianTimeToResolveProvider', () => {
     ({ collectorsService, collect } = buildMockCollectorsService({
       collectors: [incidentsCollector],
     }));
-    provider = DoraMedianTimeToResolveProvider.fromConfig(
-      new ConfigReader({}),
-      {
-        collectorsService,
-      },
-    );
+    provider = DoraMeanTimeToRestoreProvider.fromConfig(new ConfigReader({}), {
+      collectorsService,
+    });
   });
 
   it('should use default collector when no config', async () => {
@@ -85,12 +82,12 @@ describe('DoraMedianTimeToResolveProvider', () => {
     } = buildMockCollectorsService({
       collectors: [customIncidentsCollector],
     });
-    const customProvider = DoraMedianTimeToResolveProvider.fromConfig(
+    const customProvider = DoraMeanTimeToRestoreProvider.fromConfig(
       new ConfigReader({
         scorecard: {
           plugins: {
             dora: {
-              medianTimeToResolve: {
+              meanTimeToRestore: {
                 collectors: {
                   incidents: {
                     id: customIncidentsCollectorId,
@@ -123,7 +120,7 @@ describe('DoraMedianTimeToResolveProvider', () => {
     );
   });
 
-  it('should calculate median time to resolve in hours', async () => {
+  it('should calculate mean time to restore in hours', async () => {
     jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
       incidents: [
         {
@@ -134,19 +131,19 @@ describe('DoraMedianTimeToResolveProvider', () => {
         {
           id: 'INC-2',
           createdAt: '2026-06-11T10:00:00.000Z',
-          resolutionDate: '2026-06-11T13:00:00.000Z', // 3h
+          resolutionDate: '2026-06-11T12:00:00.000Z', // 2h
         },
         {
           id: 'INC-3',
           createdAt: '2026-06-12T10:00:00.000Z',
-          resolutionDate: '2026-06-12T12:00:00.000Z', // 2h
+          resolutionDate: '2026-06-12T16:00:00.000Z', // 6h
         },
       ],
     });
 
     const mttr = await provider.calculateMetric(mockEntity);
 
-    expect(mttr).toBe(2);
+    expect(mttr).toBe(3);
   });
 
   it('should return 0 when no resolved incidents are found', async () => {

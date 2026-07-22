@@ -62,7 +62,7 @@ export interface Config {
           thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
-        medianTimeToResolve?: {
+        meanTimeToRestore?: {
           collectors?: {
             incidents?: CollectorInput;
           };

@@ -33,22 +33,20 @@ import {
   incidentsCollectorInputSchema,
   incidentsCollectorOutputSchema,
 } from './schemas/incidentSchemas';
-import { calculateMedian } from './utils/calculationUtils';
+import { calculateMean } from './utils/calculationUtils';
 
-type DoraMedianTimeToResolveProviderOptions = {
+type DoraMeanTimeToRestoreProviderOptions = {
   collectorsService: ScorecardCollectorsService;
   incidentsCollectorId: string;
   incidentsCollectorInput: Record<string, unknown>;
 };
 
-export class DoraMedianTimeToResolveProvider
-  implements MetricProvider<'number'>
-{
+export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
   private readonly collectorsService: ScorecardCollectorsService;
   private readonly incidentsCollectorId: string;
   private readonly incidentsCollectorInput: Record<string, unknown>;
 
-  private constructor(options: DoraMedianTimeToResolveProviderOptions) {
+  private constructor(options: DoraMeanTimeToRestoreProviderOptions) {
     this.collectorsService = options.collectorsService;
     this.incidentsCollectorId = options.incidentsCollectorId;
     this.incidentsCollectorInput = options.incidentsCollectorInput;
@@ -59,16 +57,16 @@ export class DoraMedianTimeToResolveProvider
     options: {
       collectorsService: ScorecardCollectorsService;
     },
-  ): DoraMedianTimeToResolveProvider {
-    return new DoraMedianTimeToResolveProvider({
+  ): DoraMeanTimeToRestoreProvider {
+    return new DoraMeanTimeToRestoreProvider({
       collectorsService: options.collectorsService,
       incidentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.medianTimeToResolve.collectors.incidents.id',
+          'scorecard.plugins.dora.meanTimeToRestore.collectors.incidents.id',
         ) ?? DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
       incidentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.medianTimeToResolve.collectors.incidents.input',
+          'scorecard.plugins.dora.meanTimeToRestore.collectors.incidents.input',
         ) ?? {},
     });
   }
@@ -78,7 +76,7 @@ export class DoraMedianTimeToResolveProvider
   }
 
   getProviderId() {
-    return 'dora.medianTimeToResolve';
+    return 'dora.meanTimeToRestore';
   }
 
   getMetricType(): 'number' {
@@ -88,9 +86,9 @@ export class DoraMedianTimeToResolveProvider
   getMetric(): Metric<'number'> {
     return {
       id: this.getProviderId(),
-      title: 'DORA - Median Time to Resolve',
+      title: 'DORA - Mean Time to Restore',
       description:
-        'Measures the median time to resolve incidents over the past 30 days.',
+        'Tracks the average time to restore service after an incident over the past 30 days. Elite performers restore service in under one hour.',
       type: this.getMetricType(),
       history: true,
     };
@@ -171,6 +169,6 @@ export class DoraMedianTimeToResolveProvider
       return 0;
     }
 
-    return Number(calculateMedian(recoveryHours).toFixed(4));
+    return Number(calculateMean(recoveryHours).toFixed(4));
   }
 }

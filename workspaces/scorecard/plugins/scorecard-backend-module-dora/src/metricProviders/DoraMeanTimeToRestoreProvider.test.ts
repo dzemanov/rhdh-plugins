@@ -37,7 +37,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
         {
           id: 'INC-1',
           createdAt: '2026-06-10T10:00:00.000Z',
-          resolutionDate: '2026-06-10T12:00:00.000Z',
+          resolutionAt: '2026-06-10T12:00:00.000Z',
         },
       ],
       collectorId: DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
@@ -71,7 +71,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
         {
           id: 'INC-2',
           createdAt: '2026-06-10T10:00:00.000Z',
-          resolutionDate: '2026-06-10T12:00:00.000Z',
+          resolutionAt: '2026-06-10T12:00:00.000Z',
         },
       ],
       collectorId: customIncidentsCollectorId,
@@ -126,17 +126,17 @@ describe('DoraMeanTimeToRestoreProvider', () => {
         {
           id: 'INC-1',
           createdAt: '2026-06-10T10:00:00.000Z',
-          resolutionDate: '2026-06-10T11:00:00.000Z', // 1h
+          resolutionAt: '2026-06-10T11:00:00.000Z', // 1h
         },
         {
           id: 'INC-2',
           createdAt: '2026-06-11T10:00:00.000Z',
-          resolutionDate: '2026-06-11T12:00:00.000Z', // 2h
+          resolutionAt: '2026-06-11T12:00:00.000Z', // 2h
         },
         {
           id: 'INC-3',
           createdAt: '2026-06-12T10:00:00.000Z',
-          resolutionDate: '2026-06-12T16:00:00.000Z', // 6h
+          resolutionAt: '2026-06-12T16:00:00.000Z', // 6h
         },
       ],
     });
@@ -152,7 +152,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
         {
           id: 'INC-1',
           createdAt: '2026-06-10T10:00:00.000Z',
-          resolutionDate: null,
+          resolutionAt: null,
         },
       ],
     });

@@ -459,12 +459,12 @@ describe('JiraClient', () => {
         {
           id: '10001',
           createdAt: '2026-06-01T04:30:00.000Z',
-          resolutionDate: '2026-06-01T06:30:00.000Z',
+          resolutionAt: '2026-06-01T06:30:00.000Z',
         },
         {
           id: '10002',
           createdAt: '2026-06-02T04:30:00.000Z',
-          resolutionDate: null,
+          resolutionAt: null,
         },
       ]);
       expect(requestBody.jql).toContain('project = "INC"');

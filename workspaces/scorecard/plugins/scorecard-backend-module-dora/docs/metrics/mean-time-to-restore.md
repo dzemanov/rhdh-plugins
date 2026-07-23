@@ -7,7 +7,7 @@
 
 Mean Time to Restore measures how quickly is service restored after incidents occur.
 
-The metric computes mean incident recovery time from `createdAt` to `resolutionDate` for incidents in the last 30 days.
+The metric computes mean incident recovery time from `createdAt` to `resolutionAt` for incidents in the last 30 days.
 Only resolved incidents are considered.
 
 ## Default thresholds
@@ -56,10 +56,10 @@ Required input:
 
 Required output:
 
-- `incidents: Array<{ id: string; createdAt: string; resolutionDate: string | null }>`
+- `incidents: Array<{ id: string; createdAt: string; resolutionAt: string | null }>`
 
 `createdAt` must be a valid ISO datetime.
-`resolutionDate` must be `null` for unresolved incidents or a valid ISO datetime for resolved incidents.
+`resolutionAt` must be `null` for unresolved incidents or a valid ISO datetime for resolved incidents.
 
 Collector-specific extra input fields are allowed, but they do not replace required contract fields.
 

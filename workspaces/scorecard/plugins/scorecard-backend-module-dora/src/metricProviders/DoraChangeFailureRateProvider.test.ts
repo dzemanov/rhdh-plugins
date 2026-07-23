@@ -61,7 +61,7 @@ describe('DoraChangeFailureRateProvider', () => {
         {
           id: 'INC-1',
           createdAt: '2026-06-10T12:00:00.000Z',
-          resolutionDate: '2026-06-10T13:00:00.000Z',
+          resolutionAt: '2026-06-10T13:00:00.000Z',
         },
       ],
       collectorId: DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
@@ -116,7 +116,7 @@ describe('DoraChangeFailureRateProvider', () => {
         {
           id: 'INC-1',
           createdAt: '2026-06-10T12:00:00.000Z',
-          resolutionDate: null,
+          resolutionAt: null,
         },
       ],
       collectorId: customIncidentsCollectorId,
@@ -212,12 +212,12 @@ describe('DoraChangeFailureRateProvider', () => {
         {
           id: 'INC-1',
           createdAt: '2026-06-10T06:00:00.000Z', // for deployment 100
-          resolutionDate: null,
+          resolutionAt: null,
         },
         {
           id: 'INC-2',
           createdAt: '2026-06-12T05:00:00.000Z', // after last pair boundary
-          resolutionDate: null,
+          resolutionAt: null,
         },
       ],
     });

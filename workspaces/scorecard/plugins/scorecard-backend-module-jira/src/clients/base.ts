@@ -276,7 +276,7 @@ export abstract class JiraClient {
         ) {
           return undefined;
         }
-        const resolutionDate =
+        const resolutionAt =
           'resolutiondate' in issue.fields &&
           (typeof issue.fields.resolutiondate === 'string' ||
             issue.fields.resolutiondate === null)
@@ -286,7 +286,7 @@ export abstract class JiraClient {
         return {
           id: issue.id,
           createdAt: toIsoDateTime(issue.fields.created),
-          resolutionDate: resolutionDate ? toIsoDateTime(resolutionDate) : null,
+          resolutionAt: resolutionAt ? toIsoDateTime(resolutionAt) : null,
         };
       })
       .filter((issue): issue is JiraIssue => Boolean(issue));

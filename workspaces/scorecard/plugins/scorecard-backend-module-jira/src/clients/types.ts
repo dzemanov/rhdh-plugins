@@ -36,7 +36,7 @@ export interface JiraEntityIncidentFilters {
 export interface JiraIssue {
   id: string;
   createdAt: string;
-  resolutionDate: string | null;
+  resolutionAt: string | null;
 }
 
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';

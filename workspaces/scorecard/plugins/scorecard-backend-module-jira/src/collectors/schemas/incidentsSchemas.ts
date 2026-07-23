@@ -26,7 +26,7 @@ export const incidentsCollectorInputSchema = z
 const incidentSchema = z.object({
   id: z.string(),
   createdAt: z.string().datetime(),
-  resolutionDate: z.string().datetime().nullable(),
+  resolutionAt: z.string().datetime().nullable(),
 });
 
 export const incidentsCollectorOutputSchema = z.object({

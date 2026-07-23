@@ -23,7 +23,7 @@ describe('JiraIncidentsCollector', () => {
       {
         id: 'INC-100',
         createdAt: '2026-06-01T10:00:00.000Z',
-        resolutionDate: '2026-06-01T12:00:00.000Z',
+        resolutionAt: '2026-06-01T12:00:00.000Z',
       },
     ]);
     const mockedJiraClient = {
@@ -54,7 +54,7 @@ describe('JiraIncidentsCollector', () => {
         {
           id: 'INC-100',
           createdAt: '2026-06-01T10:00:00.000Z',
-          resolutionDate: '2026-06-01T12:00:00.000Z',
+          resolutionAt: '2026-06-01T12:00:00.000Z',
         },
       ],
     });

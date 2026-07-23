@@ -95,7 +95,7 @@ Required input:
 
 Required output:
 
-- `incidents: Array<{ id: string; createdAt: string; resolutionDate: string | null }>`
+- `incidents: Array<{ id: string; createdAt: string; resolutionAt: string | null }>`
 
 Collector-specific extra input fields are allowed, but they do not replace required contract fields.
 

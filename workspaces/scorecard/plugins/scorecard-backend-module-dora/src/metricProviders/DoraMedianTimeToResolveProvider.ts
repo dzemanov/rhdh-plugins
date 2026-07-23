@@ -33,20 +33,22 @@ import {
   incidentsCollectorInputSchema,
   incidentsCollectorOutputSchema,
 } from './schemas/incidentSchemas';
-import { calculateMean } from './utils/calculationUtils';
+import { calculateMedian } from './utils/calculationUtils';
 
-type DoraMeanTimeToRestoreProviderOptions = {
+type DoraMedianTimeToResolveProviderOptions = {
   collectorsService: ScorecardCollectorsService;
   incidentsCollectorId: string;
   incidentsCollectorInput: Record<string, unknown>;
 };
 
-export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
+export class DoraMedianTimeToResolveProvider
+  implements MetricProvider<'number'>
+{
   private readonly collectorsService: ScorecardCollectorsService;
   private readonly incidentsCollectorId: string;
   private readonly incidentsCollectorInput: Record<string, unknown>;
 
-  private constructor(options: DoraMeanTimeToRestoreProviderOptions) {
+  private constructor(options: DoraMedianTimeToResolveProviderOptions) {
     this.collectorsService = options.collectorsService;
     this.incidentsCollectorId = options.incidentsCollectorId;
     this.incidentsCollectorInput = options.incidentsCollectorInput;
@@ -57,16 +59,16 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
     options: {
       collectorsService: ScorecardCollectorsService;
     },
-  ): DoraMeanTimeToRestoreProvider {
-    return new DoraMeanTimeToRestoreProvider({
+  ): DoraMedianTimeToResolveProvider {
+    return new DoraMedianTimeToResolveProvider({
       collectorsService: options.collectorsService,
       incidentsCollectorId:
         config.getOptionalString(
-          'scorecard.plugins.dora.meanTimeToRestore.collectors.incidents.id',
+          'scorecard.plugins.dora.medianTimeToResolve.collectors.incidents.id',
         ) ?? DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
       incidentsCollectorInput:
         config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.meanTimeToRestore.collectors.incidents.input',
+          'scorecard.plugins.dora.medianTimeToResolve.collectors.incidents.input',
         ) ?? {},
     });
   }
@@ -76,7 +78,7 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
   }
 
   getProviderId() {
-    return 'dora.meanTimeToRestore';
+    return 'dora.medianTimeToResolve';
   }
 
   getMetricType(): 'number' {
@@ -86,9 +88,9 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
   getMetric(): Metric<'number'> {
     return {
       id: this.getProviderId(),
-      title: 'DORA - Mean Time to Restore',
+      title: 'DORA - Median Time to Resolve',
       description:
-        'Tracks the average time to restore service after an incident over the past 30 days. Elite performers restore service in under one hour.',
+        'Measures the median time to resolve incidents over the past 30 days.',
       type: this.getMetricType(),
       history: true,
     };
@@ -131,10 +133,7 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
 
-    const incidentsCollected = await this.collectorsService.collect<
-      typeof incidentsCollectorInputSchema,
-      typeof incidentsCollectorOutputSchema
-    >({
+    const incidentsCollected = await this.collectorsService.collect({
       collectorId: this.incidentsCollectorId,
       contract: {
         inputSchema: incidentsCollectorInputSchema,
@@ -155,7 +154,11 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
       }
       const createdAtTimestamp = new Date(incident.createdAt).getTime();
       const resolutionAtTimestamp = new Date(incident.resolutionAt).getTime();
-      if (resolutionAtTimestamp < createdAtTimestamp) {
+      if (
+        Number.isNaN(createdAtTimestamp) ||
+        Number.isNaN(resolutionAtTimestamp) ||
+        resolutionAtTimestamp < createdAtTimestamp
+      ) {
         continue;
       }
       recoveryHours.push(
@@ -167,6 +170,6 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
       return 0;
     }
 
-    return Number(calculateMean(recoveryHours).toFixed(4));
+    return Number(calculateMedian(recoveryHours).toFixed(4));
   }
 }

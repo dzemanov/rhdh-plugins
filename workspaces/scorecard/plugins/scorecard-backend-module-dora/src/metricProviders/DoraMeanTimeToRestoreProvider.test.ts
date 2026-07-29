@@ -22,6 +22,7 @@ import {
   mockEntity,
 } from './__fixtures__';
 import { DORA_DEFAULT_INCIDENTS_COLLECTOR_ID } from '../constants';
+import { DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS } from './DoraConfig';
 
 describe('DoraMeanTimeToRestoreProvider', () => {
   let incidentsCollector: ReturnType<typeof buildMockIncidentsCollector>;
@@ -50,115 +51,127 @@ describe('DoraMeanTimeToRestoreProvider', () => {
     });
   });
 
-  it('should use default collector when no config', async () => {
-    await provider.calculateMetric(mockEntity);
-
-    expect(collect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectorId: DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
-        input: expect.objectContaining({
-          from: expect.any(String),
-          to: expect.any(String),
-        }),
-      }),
-    );
+  describe('fromConfig', () => {
+    it('should create provider with default thresholds on metric', () => {
+      const metrics = provider.getMetrics();
+      expect(metrics).toHaveLength(1);
+      expect(metrics[0].thresholds).toEqual(
+        DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS,
+      );
+    });
   });
 
-  it('should use custom collector and pass custom inputs', async () => {
-    const customIncidentsCollectorId = 'custom:incidents';
-    const customIncidentsCollector = buildMockIncidentsCollector({
-      incidents: [
-        {
-          id: 'INC-2',
-          createdAt: '2026-06-10T10:00:00.000Z',
-          resolutionAt: '2026-06-10T12:00:00.000Z',
-        },
-      ],
-      collectorId: customIncidentsCollectorId,
+  describe('calculateMetrics', () => {
+    it('should use default collector when no config', async () => {
+      await provider.calculateMetrics(mockEntity);
+
+      expect(collect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collectorId: DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
+          input: expect.objectContaining({
+            from: expect.any(String),
+            to: expect.any(String),
+          }),
+        }),
+      );
     });
-    const {
-      collectorsService: customCollectorsService,
-      collect: customCollect,
-    } = buildMockCollectorsService({
-      collectors: [customIncidentsCollector],
-    });
-    const customProvider = DoraMeanTimeToRestoreProvider.fromConfig(
-      new ConfigReader({
-        scorecard: {
-          plugins: {
-            dora: {
-              meanTimeToRestore: {
-                collectors: {
-                  incidents: {
-                    id: customIncidentsCollectorId,
-                    input: {
-                      customIncidentsInputLabel: 'incidents-custom-input',
+
+    it('should use custom collector and pass custom inputs', async () => {
+      const customIncidentsCollectorId = 'custom:incidents';
+      const customIncidentsCollector = buildMockIncidentsCollector({
+        incidents: [
+          {
+            id: 'INC-2',
+            createdAt: '2026-06-10T10:00:00.000Z',
+            resolutionAt: '2026-06-10T12:00:00.000Z',
+          },
+        ],
+        collectorId: customIncidentsCollectorId,
+      });
+      const {
+        collectorsService: customCollectorsService,
+        collect: customCollect,
+      } = buildMockCollectorsService({
+        collectors: [customIncidentsCollector],
+      });
+      const customProvider = DoraMeanTimeToRestoreProvider.fromConfig(
+        new ConfigReader({
+          scorecard: {
+            plugins: {
+              dora: {
+                meanTimeToRestore: {
+                  collectors: {
+                    incidents: {
+                      id: customIncidentsCollectorId,
+                      input: {
+                        customIncidentsInputLabel: 'incidents-custom-input',
+                      },
                     },
                   },
                 },
               },
             },
           },
-        },
-      }),
-      {
-        collectorsService: customCollectorsService,
-      },
-    );
-
-    await customProvider.calculateMetric(mockEntity);
-
-    expect(customCollect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectorId: customIncidentsCollectorId,
-        input: expect.objectContaining({
-          from: expect.any(String),
-          to: expect.any(String),
-          customIncidentsInputLabel: 'incidents-custom-input',
         }),
-      }),
-    );
-  });
+        {
+          collectorsService: customCollectorsService,
+        },
+      );
 
-  it('should calculate mean time to restore in hours', async () => {
-    jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
-      incidents: [
-        {
-          id: 'INC-1',
-          createdAt: '2026-06-10T10:00:00.000Z',
-          resolutionAt: '2026-06-10T11:00:00.000Z', // 1h
-        },
-        {
-          id: 'INC-2',
-          createdAt: '2026-06-11T10:00:00.000Z',
-          resolutionAt: '2026-06-11T12:00:00.000Z', // 2h
-        },
-        {
-          id: 'INC-3',
-          createdAt: '2026-06-12T10:00:00.000Z',
-          resolutionAt: '2026-06-12T16:00:00.000Z', // 6h
-        },
-      ],
+      await customProvider.calculateMetrics(mockEntity);
+
+      expect(customCollect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collectorId: customIncidentsCollectorId,
+          input: expect.objectContaining({
+            from: expect.any(String),
+            to: expect.any(String),
+            customIncidentsInputLabel: 'incidents-custom-input',
+          }),
+        }),
+      );
     });
 
-    const mttr = await provider.calculateMetric(mockEntity);
+    it('should calculate mean time to restore in hours', async () => {
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [
+          {
+            id: 'INC-1',
+            createdAt: '2026-06-10T10:00:00.000Z',
+            resolutionAt: '2026-06-10T11:00:00.000Z', // 1h
+          },
+          {
+            id: 'INC-2',
+            createdAt: '2026-06-11T10:00:00.000Z',
+            resolutionAt: '2026-06-11T12:00:00.000Z', // 2h
+          },
+          {
+            id: 'INC-3',
+            createdAt: '2026-06-12T10:00:00.000Z',
+            resolutionAt: '2026-06-12T16:00:00.000Z', // 6h
+          },
+        ],
+      });
 
-    expect(mttr).toBe(3);
-  });
+      const results = await provider.calculateMetrics(mockEntity);
 
-  it('should return 0 when no resolved incidents are found', async () => {
-    jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
-      incidents: [
-        {
-          id: 'INC-1',
-          createdAt: '2026-06-10T10:00:00.000Z',
-          resolutionAt: null,
-        },
-      ],
+      expect(results.get('dora.meanTimeToRestore')).toBe(3);
     });
 
-    const mttr = await provider.calculateMetric(mockEntity);
+    it('should return 0 when no resolved incidents are found', async () => {
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [
+          {
+            id: 'INC-1',
+            createdAt: '2026-06-10T10:00:00.000Z',
+            resolutionAt: null,
+          },
+        ],
+      });
 
-    expect(mttr).toBe(0);
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('dora.meanTimeToRestore')).toBe(0);
+    });
   });
 });

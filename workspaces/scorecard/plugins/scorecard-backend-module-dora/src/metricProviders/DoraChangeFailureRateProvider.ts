@@ -16,11 +16,7 @@
 
 import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
-import {
-  Metric,
-  ScorecardThresholdRuleColors,
-  ThresholdConfig,
-} from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
+import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
   type ScorecardCollectorsService,
   MetricProvider,
@@ -38,6 +34,7 @@ import {
   incidentsCollectorInputSchema,
   incidentsCollectorOutputSchema,
 } from './schemas/incidentSchemas';
+import { DEFAULT_DORA_CHANGE_FAILURE_RATE_THRESHOLDS } from './DoraConfig';
 
 type DoraChangeFailureRateProviderOptions = {
   collectorsService: ScorecardCollectorsService;
@@ -97,45 +94,18 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
     return 'dora.changeFailureRate';
   }
 
-  getMetricType(): 'number' {
-    return 'number';
-  }
-
-  getMetric(): Metric<'number'> {
-    return {
-      id: this.getProviderId(),
-      title: 'DORA - Change Failure Rate',
-      description:
-        'Monitors the percentage of deployments that cause a failure in production over the past 30 days. Elite performers maintain a change failure rate below 5%.',
-      type: this.getMetricType(),
-      history: true,
-    };
-  }
-
-  getMetricThresholds(): ThresholdConfig {
-    // in percentage
-    return {
-      rules: [
-        {
-          key: 'elite',
-          expression: '<5',
-          color: ScorecardThresholdRuleColors.SUCCESS,
-          icon: 'scorecardSuccessStatusIcon',
-        },
-        {
-          key: 'medium',
-          expression: '5-15',
-          color: ScorecardThresholdRuleColors.WARNING,
-          icon: 'scorecardWarningStatusIcon',
-        },
-        {
-          key: 'low',
-          expression: '>15',
-          color: ScorecardThresholdRuleColors.ERROR,
-          icon: 'scorecardErrorStatusIcon',
-        },
-      ],
-    };
+  getMetrics(): Metric<'number'>[] {
+    return [
+      {
+        id: this.getProviderId(),
+        title: 'DORA - Change Failure Rate',
+        description:
+          'Monitors the percentage of deployments that cause a failure in production over the past 30 days. Elite performers maintain a change failure rate below 5%.',
+        type: 'number',
+        thresholds: DEFAULT_DORA_CHANGE_FAILURE_RATE_THRESHOLDS,
+        history: true,
+      },
+    ];
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
@@ -144,7 +114,8 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
     };
   }
 
-  async calculateMetric(entity: Entity): Promise<number> {
+  async calculateMetrics(entity: Entity): Promise<Map<string, number>> {
+    const results = new Map<string, number>();
     const to = new Date();
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
@@ -198,7 +169,8 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       });
 
     if (successfulProductionDeployments.length < 2) {
-      return 0;
+      results.set(this.getProviderId(), 0);
+      return results;
     }
 
     let deploymentsWithIncidents = 0;
@@ -233,11 +205,16 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
     }
 
     if (evaluatedDeployments === 0) {
-      return 0;
+      results.set(this.getProviderId(), 0);
+      return results;
     }
 
-    return Number(
-      ((deploymentsWithIncidents / evaluatedDeployments) * 100).toFixed(4),
+    results.set(
+      this.getProviderId(),
+      Number(
+        ((deploymentsWithIncidents / evaluatedDeployments) * 100).toFixed(4),
+      ),
     );
+    return results;
   }
 }

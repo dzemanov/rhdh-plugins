@@ -26,6 +26,7 @@ import {
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
   DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
 } from '../constants';
+import { DEFAULT_DORA_CHANGE_FAILURE_RATE_THRESHOLDS } from './DoraConfig';
 
 describe('DoraChangeFailureRateProvider', () => {
   let deploymentsCollector: ReturnType<typeof buildMockDeploymentsCollector>;
@@ -74,243 +75,236 @@ describe('DoraChangeFailureRateProvider', () => {
     });
   });
 
-  it('should use default collectors when no config', async () => {
-    await provider.calculateMetric(mockEntity);
-
-    expect(collect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-      }),
-    );
-    expect(collect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectorId: DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
-      }),
-    );
+  describe('fromConfig', () => {
+    it('should create provider with default thresholds on metric', () => {
+      const metrics = provider.getMetrics();
+      expect(metrics).toHaveLength(1);
+      expect(metrics[0].thresholds).toEqual(
+        DEFAULT_DORA_CHANGE_FAILURE_RATE_THRESHOLDS,
+      );
+    });
   });
 
-  it('should use custom collectors and pass custom inputs', async () => {
-    const customDeploymentsCollectorId = 'custom:deployments';
-    const customIncidentsCollectorId = 'custom:incidents';
-    const customDeploymentsCollector = buildMockDeploymentsCollector({
-      deployments: [
-        {
-          id: '100',
-          commitSha: 'sha-1',
-          environment: 'production',
-          createdAt: '2026-06-10T00:00:00.000Z',
-          result: 'success',
-        },
-        {
-          id: '101',
-          commitSha: 'sha-2',
-          environment: 'production',
-          createdAt: '2026-06-11T00:00:00.000Z',
-          result: 'success',
-        },
-      ],
-      collectorId: customDeploymentsCollectorId,
+  describe('calculateMetrics', () => {
+    it('should use default collectors when no config', async () => {
+      await provider.calculateMetrics(mockEntity);
+
+      expect(collect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+        }),
+      );
+      expect(collect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collectorId: DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
+        }),
+      );
     });
-    const customIncidentsCollector = buildMockIncidentsCollector({
-      incidents: [
-        {
-          id: 'INC-1',
-          createdAt: '2026-06-10T12:00:00.000Z',
-          resolutionAt: null,
-        },
-      ],
-      collectorId: customIncidentsCollectorId,
-    });
-    const {
-      collectorsService: customCollectorsService,
-      collect: customCollect,
-    } = buildMockCollectorsService({
-      collectors: [customDeploymentsCollector, customIncidentsCollector],
-    });
-    const customProvider = DoraChangeFailureRateProvider.fromConfig(
-      new ConfigReader({
-        scorecard: {
-          plugins: {
-            dora: {
-              changeFailureRate: {
-                collectors: {
-                  deployments: {
-                    id: customDeploymentsCollectorId,
-                    input: {
-                      customDeploymentsInputLabel: 'deployments-custom-input',
+
+    it('should use custom collectors and pass custom inputs', async () => {
+      const customDeploymentsCollectorId = 'custom:deployments';
+      const customIncidentsCollectorId = 'custom:incidents';
+      const customDeploymentsCollector = buildMockDeploymentsCollector({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '101',
+            commitSha: 'sha-2',
+            environment: 'production',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+        collectorId: customDeploymentsCollectorId,
+      });
+      const customIncidentsCollector = buildMockIncidentsCollector({
+        incidents: [
+          {
+            id: 'INC-1',
+            createdAt: '2026-06-10T12:00:00.000Z',
+            resolutionAt: null,
+          },
+        ],
+        collectorId: customIncidentsCollectorId,
+      });
+      const {
+        collectorsService: customCollectorsService,
+        collect: customCollect,
+      } = buildMockCollectorsService({
+        collectors: [customDeploymentsCollector, customIncidentsCollector],
+      });
+      const customProvider = DoraChangeFailureRateProvider.fromConfig(
+        new ConfigReader({
+          scorecard: {
+            plugins: {
+              dora: {
+                changeFailureRate: {
+                  collectors: {
+                    deployments: {
+                      id: customDeploymentsCollectorId,
+                      input: {
+                        customDeploymentsInputLabel: 'deployments-custom-input',
+                      },
                     },
-                  },
-                  incidents: {
-                    id: customIncidentsCollectorId,
-                    input: {
-                      customIncidentsInputLabel: 'incidents-custom-input',
+                    incidents: {
+                      id: customIncidentsCollectorId,
+                      input: {
+                        customIncidentsInputLabel: 'incidents-custom-input',
+                      },
                     },
                   },
                 },
               },
             },
           },
-        },
-      }),
-      {
-        collectorsService: customCollectorsService,
-      },
-    );
-
-    await customProvider.calculateMetric(mockEntity);
-
-    expect(customCollect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectorId: customDeploymentsCollectorId,
-        input: expect.objectContaining({
-          from: expect.any(String),
-          to: expect.any(String),
-          customDeploymentsInputLabel: 'deployments-custom-input',
         }),
-      }),
-    );
-    expect(customCollect).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collectorId: customIncidentsCollectorId,
-        input: expect.objectContaining({
-          from: expect.any(String),
-          to: expect.any(String),
-          customIncidentsInputLabel: 'incidents-custom-input',
+        {
+          collectorsService: customCollectorsService,
+        },
+      );
+
+      await customProvider.calculateMetrics(mockEntity);
+
+      expect(customCollect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collectorId: customDeploymentsCollectorId,
+          input: expect.objectContaining({
+            from: expect.any(String),
+            to: expect.any(String),
+            customDeploymentsInputLabel: 'deployments-custom-input',
+          }),
         }),
-      }),
-    );
-  });
-
-  it('should calculate change failure rate using incidents between successful deployments', async () => {
-    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
-      deployments: [
-        {
-          id: '100',
-          commitSha: 'sha-1',
-          environment: 'production',
-          createdAt: '2026-06-10T00:00:00.000Z',
-          result: 'success',
-        },
-        {
-          id: '101',
-          commitSha: 'sha-2',
-          environment: 'production',
-          createdAt: '2026-06-11T00:00:00.000Z',
-          result: 'success',
-        },
-        {
-          id: '102',
-          commitSha: 'sha-3',
-          environment: 'production',
-          createdAt: '2026-06-12T00:00:00.000Z',
-          result: 'success',
-        },
-      ],
-    });
-    jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
-      incidents: [
-        {
-          id: 'INC-1',
-          createdAt: '2026-06-10T06:00:00.000Z', // for deployment 100
-          resolutionAt: null,
-        },
-        {
-          id: 'INC-2',
-          createdAt: '2026-06-12T05:00:00.000Z', // after last pair boundary
-          resolutionAt: null,
-        },
-      ],
+      );
+      expect(customCollect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collectorId: customIncidentsCollectorId,
+          input: expect.objectContaining({
+            from: expect.any(String),
+            to: expect.any(String),
+            customIncidentsInputLabel: 'incidents-custom-input',
+          }),
+        }),
+      );
     });
 
-    const cfr = await provider.calculateMetric(mockEntity);
+    it('should calculate change failure rate using incidents between successful deployments', async () => {
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '101',
+            commitSha: 'sha-2',
+            environment: 'production',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '102',
+            commitSha: 'sha-3',
+            environment: 'production',
+            createdAt: '2026-06-12T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [
+          {
+            id: 'INC-1',
+            createdAt: '2026-06-10T06:00:00.000Z', // for deployment 100
+            resolutionAt: null,
+          },
+          {
+            id: 'INC-2',
+            createdAt: '2026-06-12T05:00:00.000Z', // after last pair boundary
+            resolutionAt: null,
+          },
+        ],
+      });
 
-    expect(cfr).toBe(50); // 1 failed pair out of 2 pairs
-  });
+      const results = await provider.calculateMetrics(mockEntity);
 
-  it('should return 0 when there are fewer than two deployments', async () => {
-    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
-      deployments: [
-        {
-          id: '100',
-          commitSha: 'sha-1',
-          environment: 'production',
-          createdAt: '2026-06-10T00:00:00.000Z',
-          result: 'success',
-        },
-      ],
+      expect(results.get('dora.changeFailureRate')).toBe(50); // 1 failed pair out of 2 pairs
     });
 
-    const cfr = await provider.calculateMetric(mockEntity);
+    it('should return 0 when there are fewer than two deployments', async () => {
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
 
-    expect(cfr).toBe(0);
-  });
+      const results = await provider.calculateMetrics(mockEntity);
 
-  it('should return 0 when there are fewer than two successful deployments', async () => {
-    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
-      deployments: [
-        {
-          id: '100',
-          commitSha: 'sha-1',
-          environment: 'production',
-          createdAt: '2026-06-10T00:00:00.000Z',
-          result: 'success',
-        },
-        {
-          id: '101',
-          commitSha: 'sha-2',
-          environment: 'production',
-          createdAt: '2026-06-11T00:00:00.000Z',
-          result: 'failure',
-        },
-      ],
+      expect(results.get('dora.changeFailureRate')).toBe(0);
     });
 
-    const cfr = await provider.calculateMetric(mockEntity);
+    it('should return 0 when there are fewer than two successful deployments', async () => {
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '101',
+            commitSha: 'sha-2',
+            environment: 'production',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            result: 'failure',
+          },
+        ],
+      });
 
-    expect(cfr).toBe(0);
-  });
+      const results = await provider.calculateMetrics(mockEntity);
 
-  it('should return 0 when there are fewer than two production deployments', async () => {
-    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
-      deployments: [
-        {
-          id: '100',
-          commitSha: 'sha-1',
-          environment: 'production',
-          createdAt: '2026-06-10T00:00:00.000Z',
-          result: 'success',
-        },
-        {
-          id: '101',
-          commitSha: 'sha-2',
-          environment: 'demo-test',
-          createdAt: '2026-06-11T00:00:00.000Z',
-          result: 'success',
-        },
-      ],
+      expect(results.get('dora.changeFailureRate')).toBe(0);
     });
 
-    const cfr = await provider.calculateMetric(mockEntity);
+    it('should return 0 when there are fewer than two production deployments', async () => {
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '101',
+            commitSha: 'sha-2',
+            environment: 'demo-test',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
 
-    jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
-      deployments: [
-        {
-          id: '100',
-          commitSha: 'sha-1',
-          environment: 'production',
-          createdAt: '2026-06-10T00:00:00.000Z',
-          result: 'success',
-        },
-        {
-          id: '101',
-          commitSha: 'sha-2',
-          environment: 'test-demo',
-          createdAt: '2026-06-11T00:00:00.000Z',
-          result: 'success',
-        },
-      ],
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('dora.changeFailureRate')).toBe(0);
     });
-
-    expect(cfr).toBe(0);
   });
 });

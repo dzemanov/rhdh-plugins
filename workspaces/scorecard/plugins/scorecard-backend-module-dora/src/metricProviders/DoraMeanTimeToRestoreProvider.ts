@@ -16,11 +16,7 @@
 
 import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
-import {
-  Metric,
-  ScorecardThresholdRuleColors,
-  ThresholdConfig,
-} from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
+import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
   type ScorecardCollectorsService,
   MetricProvider,
@@ -34,6 +30,7 @@ import {
   incidentsCollectorOutputSchema,
 } from './schemas/incidentSchemas';
 import { calculateMean } from './utils/calculationUtils';
+import { DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS } from './DoraConfig';
 
 type DoraMeanTimeToRestoreProviderOptions = {
   collectorsService: ScorecardCollectorsService;
@@ -79,45 +76,18 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
     return 'dora.meanTimeToRestore';
   }
 
-  getMetricType(): 'number' {
-    return 'number';
-  }
-
-  getMetric(): Metric<'number'> {
-    return {
-      id: this.getProviderId(),
-      title: 'DORA - Mean Time to Restore',
-      description:
-        'Tracks the average time to restore service after an incident over the past 30 days. Elite performers restore service in under one hour.',
-      type: this.getMetricType(),
-      history: true,
-    };
-  }
-
-  getMetricThresholds(): ThresholdConfig {
-    // in hours
-    return {
-      rules: [
-        {
-          key: 'elite',
-          expression: '<1',
-          color: ScorecardThresholdRuleColors.SUCCESS,
-          icon: 'scorecardSuccessStatusIcon',
-        },
-        {
-          key: 'medium',
-          expression: '1-24',
-          color: ScorecardThresholdRuleColors.WARNING,
-          icon: 'scorecardWarningStatusIcon',
-        },
-        {
-          key: 'low',
-          expression: '>24',
-          color: ScorecardThresholdRuleColors.ERROR,
-          icon: 'scorecardErrorStatusIcon',
-        },
-      ],
-    };
+  getMetrics(): Metric<'number'>[] {
+    return [
+      {
+        id: this.getProviderId(),
+        title: 'DORA - Mean Time to Restore',
+        description:
+          'Tracks the average time to restore service after an incident over the past 30 days. Elite performers restore service in under one hour.',
+        type: 'number',
+        thresholds: DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS,
+        history: true,
+      },
+    ];
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
@@ -126,7 +96,8 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
     };
   }
 
-  async calculateMetric(entity: Entity): Promise<number> {
+  async calculateMetrics(entity: Entity): Promise<Map<string, number>> {
+    const results = new Map<string, number>();
     const to = new Date();
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
@@ -164,9 +135,14 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
     }
 
     if (recoveryHours.length === 0) {
-      return 0;
+      results.set(this.getProviderId(), 0);
+      return results;
     }
 
-    return Number(calculateMean(recoveryHours).toFixed(4));
+    results.set(
+      this.getProviderId(),
+      Number(calculateMean(recoveryHours).toFixed(4)),
+    );
+    return results;
   }
 }

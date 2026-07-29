@@ -88,6 +88,56 @@ export const DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS: ThresholdConfig =
     ],
   };
 
+export const DEFAULT_DORA_CHANGE_FAILURE_RATE_THRESHOLDS: ThresholdConfig =
+  // Calculated metric is in percentage
+  {
+    rules: [
+      {
+        key: 'elite',
+        expression: '<5',
+        color: ScorecardThresholdRuleColors.SUCCESS,
+        icon: 'scorecardSuccessStatusIcon',
+      },
+      {
+        key: 'medium',
+        expression: '5-15',
+        color: ScorecardThresholdRuleColors.WARNING,
+        icon: 'scorecardWarningStatusIcon',
+      },
+      {
+        key: 'low',
+        expression: '>15',
+        color: ScorecardThresholdRuleColors.ERROR,
+        icon: 'scorecardErrorStatusIcon',
+      },
+    ],
+  };
+
+export const DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS: ThresholdConfig =
+  // Calculated metric is in hours
+  {
+    rules: [
+      {
+        key: 'elite',
+        expression: '<1',
+        color: ScorecardThresholdRuleColors.SUCCESS,
+        icon: 'scorecardSuccessStatusIcon',
+      },
+      {
+        key: 'medium',
+        expression: '1-24',
+        color: ScorecardThresholdRuleColors.WARNING,
+        icon: 'scorecardWarningStatusIcon',
+      },
+      {
+        key: 'low',
+        expression: '>24',
+        color: ScorecardThresholdRuleColors.ERROR,
+        icon: 'scorecardErrorStatusIcon',
+      },
+    ],
+  };
+
 function parseCollectorConfig(
   config: Config,
   collectorConfigPath: string,

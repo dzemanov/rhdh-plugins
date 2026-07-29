@@ -15,11 +15,7 @@
  */
 import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
-import {
-  Metric,
-  ScorecardThresholdRuleColors,
-  ThresholdConfig,
-} from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
+import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
   type ScorecardCollectorsService,
   MetricProvider,
@@ -32,6 +28,7 @@ import {
   deploymentsCollectorInputSchema,
   deploymentsCollectorOutputSchema,
 } from './schemas/deploymentSchemas';
+import { DEFAULT_DORA_DEPLOYMENT_FREQUENCY_THRESHOLDS } from './DoraConfig';
 
 type DoraDeploymentFrequencyProviderOptions = {
   collectorsService: ScorecardCollectorsService;
@@ -79,45 +76,18 @@ export class DoraDeploymentFrequencyProvider
     return 'dora.deploymentFrequency';
   }
 
-  getMetricType(): 'number' {
-    return 'number';
-  }
-
-  getMetric(): Metric<'number'> {
-    return {
-      id: this.getProviderId(),
-      title: 'DORA - Deployment Frequency',
-      description:
-        'Tracks how often code is successfully deployed to production over the past 30 days. Elite performers deploy on demand (multiple times per day).',
-      type: this.getMetricType(),
-      history: true,
-    };
-  }
-
-  getMetricThresholds(): ThresholdConfig {
-    // Calculated metric is deployments/week from a 30-day window
-    return {
-      rules: [
-        {
-          key: 'elite',
-          expression: '>=7',
-          color: ScorecardThresholdRuleColors.SUCCESS,
-          icon: 'scorecardSuccessStatusIcon',
-        },
-        {
-          key: 'medium',
-          expression: '1-7',
-          color: ScorecardThresholdRuleColors.WARNING,
-          icon: 'scorecardWarningStatusIcon',
-        },
-        {
-          key: 'low',
-          expression: '<1',
-          color: ScorecardThresholdRuleColors.ERROR,
-          icon: 'scorecardErrorStatusIcon',
-        },
-      ],
-    };
+  getMetrics(): Metric<'number'>[] {
+    return [
+      {
+        id: this.getProviderId(),
+        title: 'DORA - Deployment Frequency',
+        description:
+          'Tracks how often code is successfully deployed to production over the past 30 days. Elite performers deploy on demand (multiple times per day).',
+        type: 'number',
+        thresholds: DEFAULT_DORA_DEPLOYMENT_FREQUENCY_THRESHOLDS,
+        history: true,
+      },
+    ];
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
@@ -126,7 +96,8 @@ export class DoraDeploymentFrequencyProvider
     };
   }
 
-  async calculateMetric(entity: Entity): Promise<number> {
+  async calculateMetrics(entity: Entity): Promise<Map<string, number>> {
+    const results = new Map<string, number>();
     const to = new Date();
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
@@ -149,7 +120,8 @@ export class DoraDeploymentFrequencyProvider
     });
 
     if (deploymentsCollected.deployments.length === 0) {
-      return 0;
+      results.set(this.getProviderId(), 0);
+      return results;
     }
 
     const deployments = deploymentsCollected.deployments.filter(deployment => {
@@ -169,6 +141,7 @@ export class DoraDeploymentFrequencyProvider
     });
 
     const deploymentsPerWeek = (deployments.length / DORA_TIME_WINDOW_DAYS) * 7;
-    return Number(deploymentsPerWeek.toFixed(4));
+    results.set(this.getProviderId(), Number(deploymentsPerWeek.toFixed(4)));
+    return results;
   }
 }

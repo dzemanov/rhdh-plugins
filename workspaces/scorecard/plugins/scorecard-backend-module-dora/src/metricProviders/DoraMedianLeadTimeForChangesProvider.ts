@@ -16,11 +16,7 @@
 
 import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
-import {
-  Metric,
-  ScorecardThresholdRuleColors,
-  ThresholdConfig,
-} from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
+import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
   type ScorecardCollectorsService,
   MetricProvider,
@@ -39,6 +35,7 @@ import {
   deploymentsCollectorOutputSchema,
 } from './schemas/deploymentSchemas';
 import { calculateMedian } from './utils/calculationUtils';
+import { DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS } from './DoraConfig';
 
 type DoraMedianLeadTimeForChangesProviderOptions = {
   collectorsService: ScorecardCollectorsService;
@@ -105,45 +102,18 @@ export class DoraMedianLeadTimeForChangesProvider
     return 'dora.medianLeadTimeForChanges';
   }
 
-  getMetricType(): 'number' {
-    return 'number';
-  }
-
-  getMetric(): Metric<'number'> {
-    return {
-      id: this.getProviderId(),
-      title: 'DORA - Median Lead Time for Changes',
-      description:
-        'Measures the time from code commit to production deployment over the past 30 days. Elite performers have a lead time of less than one hour',
-      type: this.getMetricType(),
-      history: true,
-    };
-  }
-
-  getMetricThresholds(): ThresholdConfig {
-    // Calculated metric is in hours from a 30-day window
-    return {
-      rules: [
-        {
-          key: 'elite',
-          expression: '<24',
-          color: ScorecardThresholdRuleColors.SUCCESS,
-          icon: 'scorecardSuccessStatusIcon',
-        },
-        {
-          key: 'medium',
-          expression: '24-168',
-          color: ScorecardThresholdRuleColors.WARNING,
-          icon: 'scorecardWarningStatusIcon',
-        },
-        {
-          key: 'low',
-          expression: '>168',
-          color: ScorecardThresholdRuleColors.ERROR,
-          icon: 'scorecardErrorStatusIcon',
-        },
-      ],
-    };
+  getMetrics(): Metric<'number'>[] {
+    return [
+      {
+        id: this.getProviderId(),
+        title: 'DORA - Median Lead Time for Changes',
+        description:
+          'Measures the time from code commit to production deployment over the past 30 days. Elite performers have a lead time of less than one hour',
+        type: 'number',
+        thresholds: DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS,
+        history: true,
+      },
+    ];
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
@@ -152,7 +122,8 @@ export class DoraMedianLeadTimeForChangesProvider
     };
   }
 
-  async calculateMetric(entity: Entity): Promise<number> {
+  async calculateMetrics(entity: Entity): Promise<Map<string, number>> {
+    const results = new Map<string, number>();
     const to = new Date();
     const from = new Date();
     from.setDate(to.getDate() - DORA_TIME_WINDOW_DAYS);
@@ -192,7 +163,8 @@ export class DoraMedianLeadTimeForChangesProvider
     });
 
     if (deployments.length < 2) {
-      return 0;
+      results.set(this.getProviderId(), 0);
+      return results;
     }
 
     const leadTimeHours: number[] = [];
@@ -236,10 +208,12 @@ export class DoraMedianLeadTimeForChangesProvider
     }
 
     if (leadTimeHours.length === 0) {
-      return 0;
+      results.set(this.getProviderId(), 0);
+      return results;
     }
 
     const median = calculateMedian(leadTimeHours);
-    return Number(median.toFixed(4));
+    results.set(this.getProviderId(), Number(median.toFixed(4)));
+    return results;
   }
 }

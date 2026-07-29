@@ -63,7 +63,7 @@ export class GithubDeploymentRangePullRequestsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collect GitHub pull requests included in a deployment commit range';
+    return 'Collects GitHub pull requests included in a deployment commit range.';
   }
 
   getInputSchema() {

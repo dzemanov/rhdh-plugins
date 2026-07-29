@@ -54,7 +54,7 @@ export class GithubDeploymentsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collect GitHub deployments in a time window ASC';
+    return 'Collects data from GitHub Deployments for production deployment events.';
   }
 
   getInputSchema() {

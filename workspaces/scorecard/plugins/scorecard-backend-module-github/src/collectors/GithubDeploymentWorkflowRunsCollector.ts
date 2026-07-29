@@ -55,7 +55,7 @@ export class GithubDeploymentWorkflowRunsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collect deployment workflow runs in a time window';
+    return 'Collects data from GitHub Actions for CI/CD pipeline deployment events.';
   }
 
   getInputSchema() {

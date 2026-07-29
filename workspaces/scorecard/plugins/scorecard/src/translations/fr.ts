@@ -93,6 +93,14 @@ const scorecardTranslationFr = createTranslationMessages({
       'Mesure le temps entre le commit du code et le déploiement en production au cours des 30 derniers jours. Les meilleurs performeurs ont un délai de livraison inférieur à 24 heures.',
     'metric.dora.medianLeadTimeForChanges.title':
       'DORA - Délai médian de livraison des changements',
+    'metric.dora.changeFailureRate.description':
+      'Surveille le pourcentage de déploiements qui provoquent une défaillance en production au cours des 30 derniers jours. Les meilleurs performeurs maintiennent un taux de défaillance des changements inférieur à 5 %.',
+    'metric.dora.changeFailureRate.title':
+      'DORA - Taux de défaillance des changements',
+    'metric.dora.meanTimeToRestore.description':
+      "Suit le temps moyen de rétablissement du service après un incident au cours des 30 derniers jours. Les meilleurs performeurs rétablissent le service en moins d'une heure.",
+    'metric.dora.meanTimeToRestore.title':
+      'DORA - Temps moyen de rétablissement',
     'metric.filecheck.description':
       'Vérifie si le fichier {{name}} existe dans le référentiel.',
     'metric.filecheck.title': 'Vérification du fichier : {{name}}',

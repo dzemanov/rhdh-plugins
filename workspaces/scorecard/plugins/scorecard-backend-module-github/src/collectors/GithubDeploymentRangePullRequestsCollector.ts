@@ -109,7 +109,7 @@ export class GithubDeploymentRangePullRequestsCollector
           continue;
         }
         if (!pullRequest.firstCommitAt) {
-          this.logger.debug(
+          this.logger.warn(
             `Skipping pull request ${pullRequestId} for commit ${commitSha} due to missing firstCommitAt`,
           );
           continue;

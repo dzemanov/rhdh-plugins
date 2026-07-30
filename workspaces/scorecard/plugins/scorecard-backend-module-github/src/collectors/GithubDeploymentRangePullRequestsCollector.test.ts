@@ -97,7 +97,7 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
         },
       ],
     });
-    expect(mockedLogger.debug).toHaveBeenCalledWith(
+    expect(mockedLogger.warn).toHaveBeenCalledWith(
       'Skipping pull request 101 for commit sha-two due to missing firstCommitAt',
     );
     expect(getCommitShasBetweenSpy).toHaveBeenCalledTimes(1);

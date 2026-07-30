@@ -36,6 +36,7 @@ import {
 } from './schemas/deploymentSchemas';
 import { calculateMedian } from './utils/calculationUtils';
 import { DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS } from './DoraConfig';
+import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 
 type DoraMedianLeadTimeForChangesProviderOptions = {
   collectorsService: ScorecardCollectorsService;
@@ -118,7 +119,7 @@ export class DoraMedianLeadTimeForChangesProvider
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
     return {
-      'metadata.annotations.scorecard.io/dora': 'true',
+      'metadata.annotations.scorecard.io/dora': CATALOG_FILTER_EXISTS,
     };
   }
 

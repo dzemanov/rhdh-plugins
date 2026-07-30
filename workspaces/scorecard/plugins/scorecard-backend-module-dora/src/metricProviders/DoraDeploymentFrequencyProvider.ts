@@ -29,6 +29,7 @@ import {
   deploymentsCollectorOutputSchema,
 } from './schemas/deploymentSchemas';
 import { DEFAULT_DORA_DEPLOYMENT_FREQUENCY_THRESHOLDS } from './DoraConfig';
+import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 
 type DoraDeploymentFrequencyProviderOptions = {
   collectorsService: ScorecardCollectorsService;
@@ -92,7 +93,7 @@ export class DoraDeploymentFrequencyProvider
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
     return {
-      'metadata.annotations.scorecard.io/dora': 'true',
+      'metadata.annotations.scorecard.io/dora': CATALOG_FILTER_EXISTS,
     };
   }
 

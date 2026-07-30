@@ -25,8 +25,8 @@ const _default: OverridableFrontendPlugin<
   {
     root: RouteRef<undefined>;
     drillDown: RouteRef<{
-      aggregationId: string;
       metricId: string;
+      aggregationId: string;
     }>;
   },
   {},
@@ -58,7 +58,6 @@ const _default: OverridableFrontendPlugin<
         title?: string | undefined;
       };
       output:
-        | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
         | ExtensionDataRef<string, 'core.routing.path', {}>
         | ExtensionDataRef<
             RouteRef_2<AnyRouteRefParams>,
@@ -67,6 +66,7 @@ const _default: OverridableFrontendPlugin<
               optional: true;
             }
           >
+        | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
         | ExtensionDataRef<
             string,
             'core.title',
@@ -165,6 +165,10 @@ export const scorecardTranslationRef: TranslationRef<
     readonly 'errors.noDataFoundMessage': string;
     readonly 'errors.unsupportedAggregationType': string;
     readonly 'errors.authenticationErrorMessage': string;
+    readonly 'metric.dora.deploymentFrequency.title': string;
+    readonly 'metric.dora.deploymentFrequency.description': string;
+    readonly 'metric.dora.medianLeadTimeForChanges.title': string;
+    readonly 'metric.dora.medianLeadTimeForChanges.description': string;
     readonly 'metric.github.openPRs.title': string;
     readonly 'metric.github.openPRs.description': string;
     readonly 'metric.jira.openIssues.title': string;

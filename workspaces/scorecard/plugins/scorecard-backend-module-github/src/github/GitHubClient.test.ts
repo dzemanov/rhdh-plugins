@@ -246,32 +246,46 @@ describe('GithubClient', () => {
   });
 
   describe('getCommitShasBetween', () => {
-    it('should return deduplicated commit shas in compare range', async () => {
+    it('should return deduplicated commit shas across paginated compare results', async () => {
       const url = `https://github.com/owner/repo`;
-      mockedCompareCommitsWithBasehead.mockResolvedValue({
-        data: {
-          commits: [
-            { sha: 'sha-two' },
-            { sha: 'sha-three' },
-            { sha: 'sha-three' },
-          ],
-        },
-      });
+      mockedCompareCommitsWithBasehead
+        .mockResolvedValueOnce({
+          data: {
+            total_commits: 101,
+            commits: [{ sha: 'sha-two' }, { sha: 'sha-three' }],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            total_commits: 101,
+            commits: [{ sha: 'sha-three' }, { sha: 'sha-four' }],
+          },
+        });
 
       const commitShas = await githubClient.getCommitShasBetween(
         url,
         repository,
         'sha-one',
-        'sha-three',
+        'sha-four',
       );
 
-      expect(commitShas).toEqual(['sha-two', 'sha-three']);
-      expect(mockedCompareCommitsWithBasehead).toHaveBeenCalledWith(
+      expect(commitShas).toEqual(['sha-two', 'sha-three', 'sha-four']);
+      expect(mockedCompareCommitsWithBasehead).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           owner: repository.owner,
           repo: repository.repo,
-          basehead: 'sha-one...sha-three',
+          basehead: 'sha-one...sha-four',
           per_page: 100,
+          page: 1,
+        }),
+      );
+      expect(mockedCompareCommitsWithBasehead).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          basehead: 'sha-one...sha-four',
+          per_page: 100,
+          page: 2,
         }),
       );
       expect(getCredentialsSpy).toHaveBeenCalledWith({ url });

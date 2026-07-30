@@ -197,13 +197,32 @@ export class GithubClient {
     headSha: string,
   ): Promise<string[]> {
     const octokit = await this.getOctokitRestClient(url);
-    const response = await octokit.repos.compareCommitsWithBasehead({
+    const perPage = 100;
+    const basehead = `${baseSha}...${headSha}`;
+    const commitShas: string[] = [];
+
+    // compareCommitsWithBasehead returns a mixed object (commits/files/url), not a list endpoint,
+    // page manually instead of octokit.paginate because it is unable to handle typing correctly.
+    const firstPage = await octokit.repos.compareCommitsWithBasehead({
       owner: repository.owner,
       repo: repository.repo,
-      basehead: `${baseSha}...${headSha}`,
-      per_page: 100,
+      basehead,
+      per_page: perPage,
+      page: 1,
     });
-    const commitShas = response.data.commits.map(commit => commit.sha);
+    commitShas.push(...firstPage.data.commits.map(commit => commit.sha));
+
+    const totalPages = Math.ceil(firstPage.data.total_commits / perPage);
+    for (let page = 2; page <= totalPages; page++) {
+      const response = await octokit.repos.compareCommitsWithBasehead({
+        owner: repository.owner,
+        repo: repository.repo,
+        basehead,
+        per_page: perPage,
+        page,
+      });
+      commitShas.push(...response.data.commits.map(commit => commit.sha));
+    }
 
     return Array.from(new Set(commitShas));
   }

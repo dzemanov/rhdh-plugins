@@ -20,34 +20,33 @@ import {
   type ScorecardCollectorsService,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import {
-  DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-  DORA_TIME_WINDOW_DAYS,
-} from '../constants';
+import { DORA_TIME_WINDOW_DAYS } from '../constants';
 import {
   deploymentsCollectorInputSchema,
   deploymentsCollectorOutputSchema,
 } from './schemas/deploymentSchemas';
-import { DEFAULT_DORA_DEPLOYMENT_FREQUENCY_THRESHOLDS } from './DoraConfig';
+import {
+  DEFAULT_DORA_DEPLOYMENT_FREQUENCY_THRESHOLDS,
+  type DoraDeploymentFrequencyConfig,
+  parseDoraDeploymentFrequencyConfig,
+} from './DoraConfig';
 import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
+import { isSuccessfulProductionDeployment } from './utils/deploymentFilterUtils';
 
 type DoraDeploymentFrequencyProviderOptions = {
   collectorsService: ScorecardCollectorsService;
-  deploymentsCollectorId: string;
-  deploymentsCollectorInput: Record<string, unknown>;
+  config: DoraDeploymentFrequencyConfig;
 };
 
 export class DoraDeploymentFrequencyProvider
   implements MetricProvider<'number'>
 {
   private readonly collectorsService: ScorecardCollectorsService;
-  private readonly deploymentsCollectorId: string;
-  private readonly deploymentsCollectorInput: Record<string, unknown>;
+  private readonly config: DoraDeploymentFrequencyConfig;
 
   private constructor(options: DoraDeploymentFrequencyProviderOptions) {
     this.collectorsService = options.collectorsService;
-    this.deploymentsCollectorId = options.deploymentsCollectorId;
-    this.deploymentsCollectorInput = options.deploymentsCollectorInput;
+    this.config = options.config;
   }
 
   static fromConfig(
@@ -58,14 +57,7 @@ export class DoraDeploymentFrequencyProvider
   ): DoraDeploymentFrequencyProvider {
     return new DoraDeploymentFrequencyProvider({
       collectorsService: options.collectorsService,
-      deploymentsCollectorId:
-        config.getOptionalString(
-          'scorecard.plugins.dora.deploymentFrequency.collectors.deployments.id',
-        ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-      deploymentsCollectorInput:
-        config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.deploymentFrequency.collectors.deployments.input',
-        ) ?? {},
+      config: parseDoraDeploymentFrequencyConfig(config),
     });
   }
 
@@ -107,14 +99,14 @@ export class DoraDeploymentFrequencyProvider
       typeof deploymentsCollectorInputSchema,
       typeof deploymentsCollectorOutputSchema
     >({
-      collectorId: this.deploymentsCollectorId,
+      collectorId: this.config.deploymentsCollector.id,
       contract: {
         inputSchema: deploymentsCollectorInputSchema,
         outputSchema: deploymentsCollectorOutputSchema,
       },
       entity,
       input: {
-        ...this.deploymentsCollectorInput,
+        ...this.config.deploymentsCollector.input,
         from: from.toISOString(),
         to: to.toISOString(),
       },
@@ -125,21 +117,12 @@ export class DoraDeploymentFrequencyProvider
       return results;
     }
 
-    const deployments = deploymentsCollected.deployments.filter(deployment => {
-      // Only successful deployments count
-      if (deployment.result !== 'success') {
-        return false;
-      }
-      // Only deplyoments to production environment count, treat unknown environment as production
-      if (
-        deployment.environment &&
-        deployment.environment.toLowerCase() !== 'production'
-      ) {
-        return false;
-      }
-
-      return true;
-    });
+    const deployments = deploymentsCollected.deployments.filter(deployment =>
+      isSuccessfulProductionDeployment(
+        deployment,
+        this.config.productionEnvironments,
+      ),
+    );
 
     const deploymentsPerWeek = (deployments.length / DORA_TIME_WINDOW_DAYS) * 7;
     results.set(this.getProviderId(), Number(deploymentsPerWeek.toFixed(4)));

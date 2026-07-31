@@ -26,16 +26,38 @@ export interface Config {
     plugins?: {
       dora?: {
         deploymentFrequency?: {
-          collectors?: {
-            deployments?: CollectorInput;
+          /**
+           * Provider-specific options.
+           */
+          options?: {
+            /**
+             * Environment names treated as production (case-insensitive).
+             * Missing/unknown deployment environments still count as production.
+             * @default ['production']
+             */
+            productionEnvironments?: string[];
+            collectors?: {
+              deployments?: CollectorInput;
+            };
           };
           thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
         medianLeadTimeForChanges?: {
-          collectors?: {
-            deployments?: CollectorInput;
-            deploymentRangePullRequests?: CollectorInput;
+          /**
+           * Provider-specific options.
+           */
+          options?: {
+            /**
+             * Environment names treated as production (case-insensitive).
+             * Missing/unknown deployment environments still count as production.
+             * @default ['production']
+             */
+            productionEnvironments?: string[];
+            collectors?: {
+              deployments?: CollectorInput;
+              deploymentRangePullRequests?: CollectorInput;
+            };
           };
           thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;

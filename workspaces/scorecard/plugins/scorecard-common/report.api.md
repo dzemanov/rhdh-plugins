@@ -76,7 +76,7 @@ export const aggregationTypes: Readonly<{
 }>;
 
 // @public (undocumented)
-export type CollectorInput = {
+export type CollectorConfig = {
   id: string;
   input?: Record<string, unknown>;
 };

@@ -21,11 +21,7 @@ import {
   type ScorecardCollectorsService,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import {
-  DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-  DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
-  DORA_TIME_WINDOW_DAYS,
-} from '../constants';
+import { DORA_TIME_WINDOW_DAYS } from '../constants';
 import {
   rangePullRequestsCollectorInputSchema,
   rangePullRequestsCollectorOutputSchema,
@@ -35,37 +31,28 @@ import {
   deploymentsCollectorOutputSchema,
 } from './schemas/deploymentSchemas';
 import { calculateMedian } from './utils/calculationUtils';
-import { DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS } from './DoraConfig';
+import {
+  DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS,
+  type DoraMedianLeadTimeForChangesConfig,
+  parseDoraMedianLeadTimeForChangesConfig,
+} from './DoraConfig';
 import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
+import { isSuccessfulProductionDeployment } from './utils/deploymentFilterUtils';
 
 type DoraMedianLeadTimeForChangesProviderOptions = {
   collectorsService: ScorecardCollectorsService;
-  deploymentsCollectorId: string;
-  deploymentRangePullRequestsCollectorId: string;
-  deploymentsCollectorInput: Record<string, unknown>;
-  deploymentRangePullRequestsCollectorInput: Record<string, unknown>;
+  config: DoraMedianLeadTimeForChangesConfig;
 };
 
 export class DoraMedianLeadTimeForChangesProvider
   implements MetricProvider<'number'>
 {
   private readonly collectorsService: ScorecardCollectorsService;
-  private readonly deploymentsCollectorId: string;
-  private readonly deploymentRangePullRequestsCollectorId: string;
-  private readonly deploymentsCollectorInput: Record<string, unknown>;
-  private readonly deploymentRangePullRequestsCollectorInput: Record<
-    string,
-    unknown
-  >;
+  private readonly config: DoraMedianLeadTimeForChangesConfig;
 
   private constructor(options: DoraMedianLeadTimeForChangesProviderOptions) {
     this.collectorsService = options.collectorsService;
-    this.deploymentsCollectorId = options.deploymentsCollectorId;
-    this.deploymentRangePullRequestsCollectorId =
-      options.deploymentRangePullRequestsCollectorId;
-    this.deploymentsCollectorInput = options.deploymentsCollectorInput;
-    this.deploymentRangePullRequestsCollectorInput =
-      options.deploymentRangePullRequestsCollectorInput;
+    this.config = options.config;
   }
 
   static fromConfig(
@@ -76,22 +63,7 @@ export class DoraMedianLeadTimeForChangesProvider
   ): DoraMedianLeadTimeForChangesProvider {
     return new DoraMedianLeadTimeForChangesProvider({
       collectorsService: options.collectorsService,
-      deploymentsCollectorId:
-        config.getOptionalString(
-          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deployments.id',
-        ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-      deploymentRangePullRequestsCollectorId:
-        config.getOptionalString(
-          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deploymentRangePullRequests.id',
-        ) ?? DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
-      deploymentsCollectorInput:
-        config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deployments.input',
-        ) ?? {},
-      deploymentRangePullRequestsCollectorInput:
-        config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.medianLeadTimeForChanges.collectors.deploymentRangePullRequests.input',
-        ) ?? {},
+      config: parseDoraMedianLeadTimeForChangesConfig(config),
     });
   }
 
@@ -133,35 +105,26 @@ export class DoraMedianLeadTimeForChangesProvider
       typeof deploymentsCollectorInputSchema,
       typeof deploymentsCollectorOutputSchema
     >({
-      collectorId: this.deploymentsCollectorId,
+      collectorId: this.config.deploymentsCollector.id,
       contract: {
         inputSchema: deploymentsCollectorInputSchema,
         outputSchema: deploymentsCollectorOutputSchema,
       },
       entity,
       input: {
-        ...this.deploymentsCollectorInput,
+        ...this.config.deploymentsCollector.input,
         from: from.toISOString(),
         to: to.toISOString(),
       },
     });
 
     // Deployments are expected to be returned sorted ascending by createdAt.
-    const deployments = deploymentsCollected.deployments.filter(deployment => {
-      // Only successful deployments count
-      if (deployment.result !== 'success') {
-        return false;
-      }
-      // Only deplyoments to production environment count, treat unknown environment as production
-      if (
-        deployment.environment &&
-        deployment.environment.toLowerCase() !== 'production'
-      ) {
-        return false;
-      }
-
-      return true;
-    });
+    const deployments = deploymentsCollected.deployments.filter(deployment =>
+      isSuccessfulProductionDeployment(
+        deployment,
+        this.config.productionEnvironments,
+      ),
+    );
 
     if (deployments.length < 2) {
       throw new Error(
@@ -182,14 +145,14 @@ export class DoraMedianLeadTimeForChangesProvider
         typeof rangePullRequestsCollectorInputSchema,
         typeof rangePullRequestsCollectorOutputSchema
       >({
-        collectorId: this.deploymentRangePullRequestsCollectorId,
+        collectorId: this.config.deploymentRangePullRequestsCollector.id,
         contract: {
           inputSchema: rangePullRequestsCollectorInputSchema,
           outputSchema: rangePullRequestsCollectorOutputSchema,
         },
         entity,
         input: {
-          ...this.deploymentRangePullRequestsCollectorInput,
+          ...this.config.deploymentRangePullRequestsCollector.input,
           baseCommitSha: previousDeployment.commitSha,
           headCommitSha: deployment.commitSha,
         },

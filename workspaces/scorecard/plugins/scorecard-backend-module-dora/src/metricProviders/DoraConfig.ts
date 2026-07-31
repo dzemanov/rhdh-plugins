@@ -14,10 +14,28 @@
  * limitations under the License.
  */
 
+import type { Config } from '@backstage/config';
 import {
+  CollectorConfig,
   ScorecardThresholdRuleColors,
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
+import {
+  DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+  DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+  DORA_DEFAULT_PRODUCTION_ENVIRONMENTS,
+} from '../constants';
+
+export type DoraDeploymentFrequencyConfig = {
+  deploymentsCollector: CollectorConfig;
+  productionEnvironments: string[];
+};
+
+export type DoraMedianLeadTimeForChangesConfig = {
+  deploymentsCollector: CollectorConfig;
+  deploymentRangePullRequestsCollector: CollectorConfig;
+  productionEnvironments: string[];
+};
 
 export const DEFAULT_DORA_DEPLOYMENT_FREQUENCY_THRESHOLDS: ThresholdConfig =
   // Calculated metric is deployments/week from a 30-day window
@@ -68,3 +86,79 @@ export const DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS: ThresholdConfig =
       },
     ],
   };
+
+function parseCollectorConfig(
+  config: Config,
+  collectorConfigPath: string,
+  defaultId: string,
+): CollectorConfig {
+  return {
+    id: config.getOptionalString(`${collectorConfigPath}.id`) ?? defaultId,
+    input:
+      config.getOptional<Record<string, unknown>>(
+        `${collectorConfigPath}.input`,
+      ) ?? {},
+  };
+}
+
+function parseProductionEnvironments(
+  config: Config,
+  metricConfigPath: string,
+): string[] {
+  const configured = config.getOptionalStringArray(
+    `${metricConfigPath}.options.productionEnvironments`,
+  );
+
+  if (!configured || configured.length === 0) {
+    return [...DORA_DEFAULT_PRODUCTION_ENVIRONMENTS];
+  }
+
+  return configured;
+}
+
+/**
+ * Parses deployment-frequency provider config from the root Backstage config.
+ */
+export function parseDoraDeploymentFrequencyConfig(
+  config: Config,
+): DoraDeploymentFrequencyConfig {
+  const providerConfigPath = 'scorecard.plugins.dora.deploymentFrequency';
+
+  return {
+    deploymentsCollector: parseCollectorConfig(
+      config,
+      `${providerConfigPath}.options.collectors.deployments`,
+      DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+    ),
+    productionEnvironments: parseProductionEnvironments(
+      config,
+      providerConfigPath,
+    ),
+  };
+}
+
+/**
+ * Parses median-lead-time-for-changes provider config from the root Backstage config.
+ */
+export function parseDoraMedianLeadTimeForChangesConfig(
+  config: Config,
+): DoraMedianLeadTimeForChangesConfig {
+  const providerConfigPath = 'scorecard.plugins.dora.medianLeadTimeForChanges';
+
+  return {
+    deploymentsCollector: parseCollectorConfig(
+      config,
+      `${providerConfigPath}.options.collectors.deployments`,
+      DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+    ),
+    deploymentRangePullRequestsCollector: parseCollectorConfig(
+      config,
+      `${providerConfigPath}.options.collectors.deploymentRangePullRequests`,
+      DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+    ),
+    productionEnvironments: parseProductionEnvironments(
+      config,
+      providerConfigPath,
+    ),
+  };
+}

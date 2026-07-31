@@ -91,11 +91,13 @@ describe('DoraDeploymentFrequencyProvider', () => {
             plugins: {
               dora: {
                 deploymentFrequency: {
-                  collectors: {
-                    deployments: {
-                      id: customCollectorId,
-                      input: {
-                        artificialLabel: 'frequency-test',
+                  options: {
+                    collectors: {
+                      deployments: {
+                        id: customCollectorId,
+                        input: {
+                          artificialLabel: 'frequency-test',
+                        },
                       },
                     },
                   },
@@ -176,6 +178,58 @@ describe('DoraDeploymentFrequencyProvider', () => {
       const results = await provider.calculateMetrics(mockEntity);
 
       expect(results.get('dora.deploymentFrequency')).toBe(0);
+    });
+
+    it('should treat configured productionEnvironments as production', async () => {
+      const customProvider = DoraDeploymentFrequencyProvider.fromConfig(
+        new ConfigReader({
+          scorecard: {
+            plugins: {
+              dora: {
+                deploymentFrequency: {
+                  options: {
+                    productionEnvironments: ['prod', 'live'],
+                  },
+                },
+              },
+            },
+          },
+        }),
+        {
+          collectorsService,
+        },
+      );
+
+      (deploymentsCollector.collect as jest.Mock).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'prod',
+            createdAt: '2026-06-01T10:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '101',
+            commitSha: 'sha-2',
+            environment: 'live',
+            createdAt: '2026-06-02T10:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '102',
+            commitSha: 'sha-3',
+            environment: 'production',
+            createdAt: '2026-06-03T10:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
+
+      const results = await customProvider.calculateMetrics(mockEntity);
+
+      // production is no longer accepted; only prod + live count
+      expect(results.get('dora.deploymentFrequency')).toBe(0.4667);
     });
   });
 });

@@ -9,6 +9,30 @@ Deployment Frequency measures how often a team successfully deploys changes to p
 
 The metric counts successful deployments to production (or unknown environment) and normalizes that count to weekly frequency.
 
+## Options
+
+Provider-specific settings are under `options`:
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      deploymentFrequency:
+        options:
+          productionEnvironments:
+            - production
+            - prod
+          collectors:
+            deployments:
+              id: github:deployments
+```
+
+- `productionEnvironments`
+  - Default: `['production']`
+  - Matching is case-insensitive; a deployment counts if its environment matches **any** configured name
+  - Missing/unknown `environment` still counts as production
+- `collectors` — see [Collectors](#collectors)
+
 ## Default thresholds
 
 Thresholds are applied to the computed `deployments/week` value:
@@ -72,9 +96,10 @@ scorecard:
   plugins:
     dora:
       deploymentFrequency:
-        collectors:
-          deployments:
-            id: github:deployments
+        options:
+          collectors:
+            deployments:
+              id: github:deployments
 ```
 
 ### Use GitHub deployment workflow runs collector
@@ -86,11 +111,12 @@ scorecard:
   plugins:
     dora:
       deploymentFrequency:
-        collectors:
-          deployments:
-            id: github:deploymentWorkflowRuns
-            input:
-              workflowName: Custom deployment
+        options:
+          collectors:
+            deployments:
+              id: github:deploymentWorkflowRuns
+              input:
+                workflowName: Custom deployment
 ```
 
 ### Use custom deployments collector
@@ -100,9 +126,10 @@ scorecard:
   plugins:
     dora:
       deploymentFrequency:
-        collectors:
-          deployments:
-            id: customDatasource:deployments
-            input:
-              # optional collector-specific extra input
+        options:
+          collectors:
+            deployments:
+              id: customDatasource:deployments
+              input:
+                # optional collector-specific extra input
 ```

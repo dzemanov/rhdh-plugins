@@ -17,7 +17,7 @@
 /**
  * @public
  */
-export type CollectorInput = {
+export type CollectorConfig = {
   id: string;
   input?: Record<string, unknown>;
 };

@@ -149,18 +149,21 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
             plugins: {
               dora: {
                 medianLeadTimeForChanges: {
-                  collectors: {
-                    deployments: {
-                      id: customDeploymentsCollectorId,
-                      input: {
-                        artificialDeploymentFlag: true,
-                        customDeploymentsInputLabel: 'deployments-custom-input',
+                  options: {
+                    collectors: {
+                      deployments: {
+                        id: customDeploymentsCollectorId,
+                        input: {
+                          artificialDeploymentFlag: true,
+                          customDeploymentsInputLabel:
+                            'deployments-custom-input',
+                        },
                       },
-                    },
-                    deploymentRangePullRequests: {
-                      id: customRangePullRequestsCollectorId,
-                      input: {
-                        artificialRangeLabel: 'range-custom-input',
+                      deploymentRangePullRequests: {
+                        id: customRangePullRequestsCollectorId,
+                        input: {
+                          artificialRangeLabel: 'range-custom-input',
+                        },
                       },
                     },
                   },
@@ -279,6 +282,50 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
         /need at least 2 successful production deployments/,
       );
       expect(rangePullRequestsCollector.collect).not.toHaveBeenCalled();
+    });
+
+    it('should use configured productionEnvironments when filtering deployments', async () => {
+      const customProvider = DoraMedianLeadTimeForChangesProvider.fromConfig(
+        new ConfigReader({
+          scorecard: {
+            plugins: {
+              dora: {
+                medianLeadTimeForChanges: {
+                  options: {
+                    productionEnvironments: ['prod'],
+                  },
+                },
+              },
+            },
+          },
+        }),
+        {
+          collectorsService,
+        },
+      );
+
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '400',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '401',
+            commitSha: 'sha-2',
+            environment: 'prod',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
+
+      await expect(customProvider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /need at least 2 successful production deployments.*found 1/,
+      );
     });
 
     it('should throw when no pull requests with measurable lead time are found', async () => {

@@ -16,6 +16,32 @@ This metric assumes deployments form a single chronological stream for the entit
 
 If fewer than two successful production deployments exist in the window, or no pull requests with a measurable lead time are found between deployments, calculation fails with an error for now.
 
+## Options
+
+Provider-specific settings are under `options`:
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      medianLeadTimeForChanges:
+        options:
+          productionEnvironments:
+            - production
+            - prod
+          collectors:
+            deployments:
+              id: github:deployments
+            deploymentRangePullRequests:
+              id: github:deploymentRangePullRequests
+```
+
+- `productionEnvironments`
+  - Default: `['production']`
+  - Matching is case-insensitive; a deployment counts if its environment matches **any** configured name
+  - Missing/unknown `environment` still counts as production
+- `collectors` — see [Collectors](#collectors)
+
 ## Default thresholds
 
 Thresholds are applied to the computed value in hours:
@@ -118,11 +144,12 @@ scorecard:
   plugins:
     dora:
       medianLeadTimeForChanges:
-        collectors:
-          deployments:
-            id: github:deployments
-          deploymentRangePullRequests:
-            id: github:deploymentRangePullRequests
+        options:
+          collectors:
+            deployments:
+              id: github:deployments
+            deploymentRangePullRequests:
+              id: github:deploymentRangePullRequests
 ```
 
 ### Use GitHub workflow runs for deployments
@@ -134,13 +161,14 @@ scorecard:
   plugins:
     dora:
       medianLeadTimeForChanges:
-        collectors:
-          deployments:
-            id: github:deploymentWorkflowRuns
-            input:
-              workflowName: deploy.yml
-          deploymentRangePullRequests:
-            id: github:deploymentRangePullRequests
+        options:
+          collectors:
+            deployments:
+              id: github:deploymentWorkflowRuns
+              input:
+                workflowName: deploy.yml
+            deploymentRangePullRequests:
+              id: github:deploymentRangePullRequests
 ```
 
 ### Use custom collectors
@@ -150,13 +178,14 @@ scorecard:
   plugins:
     dora:
       medianLeadTimeForChanges:
-        collectors:
-          deployments:
-            id: customDatasource:deployments
-            input:
-              # optional collector-specific extra input
-          deploymentRangePullRequests:
-            id: customDatasource:deploymentRangePullRequests
-            input:
-              # optional collector-specific extra input
+        options:
+          collectors:
+            deployments:
+              id: customDatasource:deployments
+              input:
+                # optional collector-specific extra input
+            deploymentRangePullRequests:
+              id: customDatasource:deploymentRangePullRequests
+              input:
+                # optional collector-specific extra input
 ```

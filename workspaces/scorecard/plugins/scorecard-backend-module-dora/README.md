@@ -74,22 +74,26 @@ scorecard:
   plugins:
     dora:
       deploymentFrequency:
-        collectors:
-          deployments:
-            id: customDatasource:deployments
-            input:
-              # merged with generated from/to window
-              # your collector-specific options
+        options:
+          productionEnvironments: [production, prod]
+          collectors:
+            deployments:
+              id: customDatasource:deployments
+              input:
+                # merged with generated from/to window
+                # your collector-specific options
       medianLeadTimeForChanges:
-        collectors:
-          deployments:
-            id: customDatasource:deployments
-            input:
-              # merged with generated from/to window
-          deploymentRangePullRequests:
-            id: customDatasource:deploymentRangePullRequests
-            input:
-              # merged with generated baseCommitSha/headCommitSha
+        options:
+          productionEnvironments: [production, prod]
+          collectors:
+            deployments:
+              id: customDatasource:deployments
+              input:
+                # merged with generated from/to window
+            deploymentRangePullRequests:
+              id: customDatasource:deploymentRangePullRequests
+              input:
+                # merged with generated baseCommitSha/headCommitSha
 ```
 
 ## Scheduling

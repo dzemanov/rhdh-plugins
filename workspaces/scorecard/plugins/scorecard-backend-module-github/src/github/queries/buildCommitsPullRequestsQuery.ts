@@ -20,10 +20,10 @@ export function buildCommitsPullRequestsQuery(
   repository: GithubRepository,
   shas: string[],
 ): { query: string; variables: Record<string, string> } {
-  // limit to maximum of 50 PRs associated to commit
+  // A commit usually has 1 associated PR; keep first: 10 for odd edge cases.
   const commitAssociatedPRsSection = `
   ... on Commit {
-    associatedPullRequests(first: 50) {
+    associatedPullRequests(first: 10) {
       nodes {
         number
         commits(first: 1) {

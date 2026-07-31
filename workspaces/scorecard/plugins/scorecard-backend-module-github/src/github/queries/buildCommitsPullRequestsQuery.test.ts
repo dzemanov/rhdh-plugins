@@ -35,7 +35,7 @@ describe('buildCommitsPullRequestsQuery', () => {
     );
     expect(query).toContain('repository(owner: $owner, name: $repo)');
     expect(query).toContain('commit0: object(expression: $sha0)');
-    expect(query).toContain('associatedPullRequests(first: 50)');
+    expect(query).toContain('associatedPullRequests(first: 10)');
     expect(query).toContain('committedDate');
   });
 

@@ -16,7 +16,7 @@
 
 import { SchedulerServiceTaskScheduleDefinitionConfig } from '@backstage/backend-plugin-api';
 import {
-  CollectorInput,
+  CollectorConfig,
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 
@@ -37,7 +37,7 @@ export interface Config {
              */
             productionEnvironments?: string[];
             collectors?: {
-              deployments?: CollectorInput;
+              deployments?: CollectorConfig;
             };
           };
           thresholds?: ThresholdConfig;
@@ -55,8 +55,8 @@ export interface Config {
              */
             productionEnvironments?: string[];
             collectors?: {
-              deployments?: CollectorInput;
-              deploymentRangePullRequests?: CollectorInput;
+              deployments?: CollectorConfig;
+              deploymentRangePullRequests?: CollectorConfig;
             };
           };
           thresholds?: ThresholdConfig;

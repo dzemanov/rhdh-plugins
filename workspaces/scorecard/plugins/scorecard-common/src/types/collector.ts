@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
+import { JsonValue } from '@backstage/types';
+
 /**
  * @public
  */
 export type CollectorConfig = {
   id: string;
-  input?: Record<string, unknown>;
+  input?: Record<string, JsonValue>;
 };

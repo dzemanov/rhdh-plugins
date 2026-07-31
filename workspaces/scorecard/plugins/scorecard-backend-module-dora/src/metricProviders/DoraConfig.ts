@@ -25,6 +25,7 @@ import {
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
   DORA_DEFAULT_PRODUCTION_ENVIRONMENTS,
 } from '../constants';
+import { JsonValue } from '@backstage/types';
 
 export type DoraDeploymentFrequencyConfig = {
   deploymentsCollector: CollectorConfig;
@@ -95,7 +96,7 @@ function parseCollectorConfig(
   return {
     id: config.getOptionalString(`${collectorConfigPath}.id`) ?? defaultId,
     input:
-      config.getOptional<Record<string, unknown>>(
+      config.getOptional<Record<string, JsonValue>>(
         `${collectorConfigPath}.input`,
       ) ?? {},
   };

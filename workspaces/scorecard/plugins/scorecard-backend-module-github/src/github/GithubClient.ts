@@ -26,8 +26,11 @@ import {
   GithubPullRequest,
   GithubRepository,
   GithubDeploymentsQueryResponse,
-  GithubCommitPullRequestsQueryResponse,
+  GithubCommitsPullRequestsQueryResponse,
 } from './types';
+import { GITHUB_BATCH_SIZE } from './constants';
+import { buildCommitsPullRequestsQuery } from './queries/buildCommitsPullRequestsQuery';
+import { mapCommitsPullRequests } from './mappers';
 
 export class GithubClient {
   private readonly integrations: ScmIntegrations;
@@ -209,7 +212,7 @@ export class GithubClient {
     headSha: string,
   ): Promise<string[]> {
     const octokit = await this.getOctokitRestClient(url);
-    const perPage = 100;
+
     const basehead = `${baseSha}...${headSha}`;
     const commitShas: string[] = [];
 
@@ -219,18 +222,20 @@ export class GithubClient {
       owner: repository.owner,
       repo: repository.repo,
       basehead,
-      per_page: perPage,
+      per_page: GITHUB_BATCH_SIZE,
       page: 1,
     });
     commitShas.push(...firstPage.data.commits.map(commit => commit.sha));
 
-    const totalPages = Math.ceil(firstPage.data.total_commits / perPage);
+    const totalPages = Math.ceil(
+      firstPage.data.total_commits / GITHUB_BATCH_SIZE,
+    );
     for (let page = 2; page <= totalPages; page++) {
       const response = await octokit.repos.compareCommitsWithBasehead({
         owner: repository.owner,
         repo: repository.repo,
         basehead,
-        per_page: perPage,
+        per_page: GITHUB_BATCH_SIZE,
         page,
       });
       commitShas.push(...response.data.commits.map(commit => commit.sha));
@@ -239,64 +244,44 @@ export class GithubClient {
     return Array.from(new Set(commitShas));
   }
 
-  async getCommitPullRequests(
+  async getCommitsPullRequests(
     url: string,
     repository: GithubRepository,
-    sha: string,
-  ): Promise<GithubPullRequest[]> {
-    const octokit = await this.getOctokitClient(url);
-    const query = `
-      query getCommitPullRequests($owner: String!, $repo: String!, $sha: String!) {
-        repository(owner: $owner, name: $repo) {
-          object(expression: $sha) {
-            ... on Commit {
-              associatedPullRequests(first: 50) {
-                nodes {
-                  number
-                  commits(first: 1) {
-                    nodes {
-                      commit {
-                        committedDate
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    const response = await octokit<GithubCommitPullRequestsQueryResponse>(
-      query,
-      {
-        owner: repository.owner,
-        repo: repository.repo,
-        sha,
-      },
-    );
-
-    if (!response.repository) {
-      throw new Error(
-        `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
-      );
+    shas: string[],
+  ): Promise<Map<string, GithubPullRequest[]>> {
+    const pullRequestsBySha = new Map<string, GithubPullRequest[]>();
+    if (shas.length === 0) {
+      return pullRequestsBySha;
     }
 
-    const pullRequests =
-      response.repository.object?.associatedPullRequests?.nodes ?? [];
+    const octokit = await this.getOctokitClient(url);
+    for (let offset = 0; offset < shas.length; offset += GITHUB_BATCH_SIZE) {
+      const batch = shas.slice(offset, offset + GITHUB_BATCH_SIZE);
+      const { query, variables } = buildCommitsPullRequestsQuery(
+        repository,
+        batch,
+      );
 
-    return pullRequests.flatMap(pr =>
-      pr
-        ? [
-            {
-              number: pr.number,
-              firstCommitAt:
-                pr.commits?.nodes?.[0]?.commit?.committedDate ?? null,
-            },
-          ]
-        : [],
-    );
+      const response = await octokit<GithubCommitsPullRequestsQueryResponse>(
+        query,
+        variables,
+      );
+
+      if (!response.repository) {
+        throw new Error(
+          `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
+        );
+      }
+
+      for (const [sha, pullRequests] of mapCommitsPullRequests(
+        response.repository,
+        batch,
+      )) {
+        pullRequestsBySha.set(sha, pullRequests);
+      }
+    }
+
+    return pullRequestsBySha;
   }
 
   async getWorkflowRuns(
@@ -310,7 +295,11 @@ export class GithubClient {
 
     const workflows = await octokit.paginate(
       octokit.actions.listRepoWorkflows,
-      { owner: repository.owner, repo: repository.repo, per_page: 100 },
+      {
+        owner: repository.owner,
+        repo: repository.repo,
+        per_page: GITHUB_BATCH_SIZE,
+      },
       response => response.data,
     );
 

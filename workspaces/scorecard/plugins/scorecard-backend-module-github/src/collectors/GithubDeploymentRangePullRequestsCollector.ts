@@ -92,17 +92,17 @@ export class GithubDeploymentRangePullRequestsCollector
       options.input.headCommitSha,
     );
 
+    const pullRequestsBySha = await this.client.getCommitsPullRequests(
+      target,
+      repository,
+      commitShas,
+    );
+
     const pullRequestsById = new Map<
       string,
       { id: string; firstCommitAt: string }
     >();
-    for (const commitSha of commitShas) {
-      const commitPullRequests = await this.client.getCommitPullRequests(
-        target,
-        repository,
-        commitSha,
-      );
-
+    for (const [commitSha, commitPullRequests] of pullRequestsBySha) {
       for (const pullRequest of commitPullRequests) {
         const pullRequestId = String(pullRequest.number);
         if (pullRequestsById.has(pullRequestId)) {

@@ -220,13 +220,14 @@ describe('GithubClient', () => {
     });
   });
 
-  describe('getCommitPullRequests', () => {
-    it('should return pull requests linked to a commit sha', async () => {
+  describe('getCommitsPullRequests', () => {
+    it('should return pull requests linked to commit shas', async () => {
       const url = `https://github.com/owner/repo`;
-      const sha = '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1';
+      const shaOne = '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1';
+      const shaTwo = '122afb699853d5decd7225dee37a6bad7176b013';
       mockedGraphqlClient.mockResolvedValue({
         repository: {
-          object: {
+          commit0: {
             associatedPullRequests: {
               nodes: [
                 {
@@ -244,28 +245,55 @@ describe('GithubClient', () => {
               ],
             },
           },
+          commit1: {
+            associatedPullRequests: {
+              nodes: [
+                {
+                  number: 456,
+                  commits: {
+                    nodes: [
+                      {
+                        commit: {
+                          committedDate: '2026-05-29T08:30:00.000Z',
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
         },
       });
 
-      const pullRequests = await githubClient.getCommitPullRequests(
+      const pullRequestsBySha = await githubClient.getCommitsPullRequests(
         url,
         repository,
-        sha,
+        [shaOne, shaTwo],
       );
 
-      expect(pullRequests).toEqual([
-        {
-          number: 123,
-          firstCommitAt: '2026-05-28T08:30:00.000Z',
-        },
-      ]);
+      expect(Object.fromEntries(pullRequestsBySha)).toEqual({
+        [shaOne]: [
+          {
+            number: 123,
+            firstCommitAt: '2026-05-28T08:30:00.000Z',
+          },
+        ],
+        [shaTwo]: [
+          {
+            number: 456,
+            firstCommitAt: '2026-05-29T08:30:00.000Z',
+          },
+        ],
+      });
       expect(mockedGraphqlClient).toHaveBeenCalledTimes(1);
       expect(mockedGraphqlClient).toHaveBeenCalledWith(
-        expect.stringContaining('query getCommitPullRequests'),
+        expect.stringContaining('query getCommitsPullRequests'),
         expect.objectContaining({
           owner: repository.owner,
           repo: repository.repo,
-          sha,
+          sha0: shaOne,
+          sha1: shaTwo,
         }),
       );
       expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
@@ -276,11 +304,9 @@ describe('GithubClient', () => {
       mockedGraphqlClient.mockResolvedValue({ repository: null });
 
       await expect(
-        githubClient.getCommitPullRequests(
-          url,
-          repository,
+        githubClient.getCommitsPullRequests(url, repository, [
           '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1',
-        ),
+        ]),
       ).rejects.toThrow(
         `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
       );

@@ -25,30 +25,35 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
       .spyOn(GithubClient.prototype, 'getCommitShasBetween')
       .mockResolvedValue(['sha-two', 'sha-three']);
 
-    const getCommitPullRequestsSpy = jest
-      .spyOn(GithubClient.prototype, 'getCommitPullRequests')
-      .mockImplementation(async (_url, _repository, sha) => {
-        if (sha === 'sha-two') {
-          return [
-            {
-              number: 100,
-              firstCommitAt: '2026-05-28T10:00:00.000Z',
-            },
-            { number: 101, firstCommitAt: null },
-            {
-              number: 102,
-              firstCommitAt: '2026-05-30T10:00:00.000Z',
-            },
-          ];
-        }
-
-        return [
-          {
-            number: 102,
-            firstCommitAt: '2026-05-30T10:00:00.000Z',
-          },
-        ];
-      });
+    const getCommitsPullRequestsSpy = jest
+      .spyOn(GithubClient.prototype, 'getCommitsPullRequests')
+      .mockResolvedValue(
+        new Map([
+          [
+            'sha-two',
+            [
+              {
+                number: 100,
+                firstCommitAt: '2026-05-28T10:00:00.000Z',
+              },
+              { number: 101, firstCommitAt: null },
+              {
+                number: 102,
+                firstCommitAt: '2026-05-30T10:00:00.000Z',
+              },
+            ],
+          ],
+          [
+            'sha-three',
+            [
+              {
+                number: 102,
+                firstCommitAt: '2026-05-30T10:00:00.000Z',
+              },
+            ],
+          ],
+        ]),
+      );
     const mockedLogger = mockServices.logger.mock();
 
     const collector = GithubDeploymentRangePullRequestsCollector.fromConfig(
@@ -101,6 +106,11 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
       'Skipping pull request 101 for commit sha-two due to missing firstCommitAt',
     );
     expect(getCommitShasBetweenSpy).toHaveBeenCalledTimes(1);
-    expect(getCommitPullRequestsSpy).toHaveBeenCalledTimes(2);
+    expect(getCommitsPullRequestsSpy).toHaveBeenCalledTimes(1);
+    expect(getCommitsPullRequestsSpy).toHaveBeenCalledWith(
+      'https://github.com/owner/repo',
+      { owner: 'owner', repo: 'repo' },
+      ['sha-two', 'sha-three'],
+    );
   });
 });

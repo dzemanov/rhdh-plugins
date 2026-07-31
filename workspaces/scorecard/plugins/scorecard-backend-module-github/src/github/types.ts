@@ -62,21 +62,23 @@ export type GithubDeploymentsQueryResponse = GraphQlQueryResponseData & {
   } | null;
 };
 
-export type GithubCommitPullRequestsQueryResponse = GraphQlQueryResponseData & {
-  repository: {
-    object?: {
-      associatedPullRequests?: {
-        nodes: Array<{
-          number: number;
-          commits?: {
-            nodes: Array<{
-              commit?: {
-                committedDate?: string | null;
-              } | null;
-            } | null> | null;
-          } | null;
-        } | null> | null;
-      } | null;
-    } | null;
-  } | null;
-};
+export type GithubCommitsPullRequestsQueryResponse =
+  GraphQlQueryResponseData & {
+    repository: Record<
+      string,
+      {
+        associatedPullRequests?: {
+          nodes: Array<{
+            number: number;
+            commits?: {
+              nodes: Array<{
+                commit?: {
+                  committedDate?: string | null;
+                } | null;
+              } | null> | null;
+            } | null;
+          } | null> | null;
+        } | null;
+      } | null
+    > | null;
+  };

@@ -93,11 +93,17 @@ export class GithubClient {
         pullRequests: {
           totalCount: number;
         };
-      };
+      } | null;
     }>(query, {
       owner: repository.owner,
       repo: repository.repo,
     });
+
+    if (!response.repository) {
+      throw new Error(
+        `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
+      );
+    }
 
     return response.repository.pullRequests.totalCount;
   }
@@ -145,17 +151,23 @@ export class GithubClient {
       const response: GithubDeploymentsQueryResponse = await octokit(query, {
         owner: repository.owner,
         repo: repository.repo,
-        after,
+        after: after,
       });
 
-      const pageDeployments = response.repository.deployments.nodes;
+      if (!response.repository) {
+        throw new Error(
+          `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
+        );
+      }
+
+      const pageDeployments = response.repository.deployments?.nodes ?? [];
 
       if (pageDeployments.length === 0) {
         break;
       }
 
       for (const deployment of pageDeployments) {
-        if (!deployment.databaseId || !deployment.commitOid) {
+        if (!deployment || !deployment.databaseId || !deployment.commitOid) {
           continue;
         }
 
@@ -181,8 +193,8 @@ export class GithubClient {
 
       hasMorePages =
         !reachedOlderThanWindow &&
-        response.repository.deployments.pageInfo.hasNextPage;
-      after = response.repository.deployments.pageInfo.endCursor;
+        Boolean(response.repository.deployments?.pageInfo.hasNextPage);
+      after = response.repository.deployments?.pageInfo.endCursor ?? null;
     }
 
     // GitHub returns DESC by createdAt so we can stop early when outside of time range;
@@ -265,13 +277,26 @@ export class GithubClient {
       },
     );
 
+    if (!response.repository) {
+      throw new Error(
+        `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
+      );
+    }
+
     const pullRequests =
       response.repository.object?.associatedPullRequests?.nodes ?? [];
 
-    return pullRequests.map(pr => ({
-      number: pr.number,
-      firstCommitAt: pr.commits?.nodes[0]?.commit?.committedDate ?? null,
-    }));
+    return pullRequests.flatMap(pr =>
+      pr
+        ? [
+            {
+              number: pr.number,
+              firstCommitAt:
+                pr.commits?.nodes?.[0]?.commit?.committedDate ?? null,
+            },
+          ]
+        : [],
+    );
   }
 
   async getWorkflowRuns(

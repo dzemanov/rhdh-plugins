@@ -116,6 +116,17 @@ describe('GithubClient', () => {
         githubClient.getOpenPullRequestsCount(unknownUrl, repository),
       ).rejects.toThrow(`Missing GitHub integration for '${unknownUrl}'`);
     });
+
+    it('should throw when repository is not found or inaccessible', async () => {
+      const url = `https://github.com/owner/repo`;
+      mockedGraphqlClient.mockResolvedValue({ repository: null });
+
+      await expect(
+        githubClient.getOpenPullRequestsCount(url, repository),
+      ).rejects.toThrow(
+        `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
+      );
+    });
   });
 
   describe('getDeployments', () => {
@@ -191,6 +202,22 @@ describe('GithubClient', () => {
       );
       expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
     });
+
+    it('should throw when repository is not found or inaccessible', async () => {
+      const url = `https://github.com/owner/repo`;
+      mockedGraphqlClient.mockResolvedValue({ repository: null });
+
+      await expect(
+        githubClient.getDeployments(
+          url,
+          repository,
+          new Date('2026-05-01T00:00:00.000Z'),
+          new Date('2026-05-31T23:59:59.000Z'),
+        ),
+      ).rejects.toThrow(
+        `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
+      );
+    });
   });
 
   describe('getCommitPullRequests', () => {
@@ -242,6 +269,21 @@ describe('GithubClient', () => {
         }),
       );
       expect(getCredentialsSpy).toHaveBeenCalledWith({ url });
+    });
+
+    it('should throw when repository is not found or inaccessible', async () => {
+      const url = `https://github.com/owner/repo`;
+      mockedGraphqlClient.mockResolvedValue({ repository: null });
+
+      await expect(
+        githubClient.getCommitPullRequests(
+          url,
+          repository,
+          '6f9cb0a3627d4f0f194f2efce2685f6f6fd7f8a1',
+        ),
+      ).rejects.toThrow(
+        `GitHub repository '${repository.owner}/${repository.repo}' was not found or is inaccessible`,
+      );
     });
   });
 

@@ -53,13 +53,13 @@ export type GithubDeploymentsQueryResponse = GraphQlQueryResponseData & {
         latestStatus?: {
           state?: string | null;
         } | null;
-      }>;
+      } | null> | null;
       pageInfo: {
         hasNextPage: boolean;
         endCursor: string | null;
       };
-    };
-  };
+    } | null;
+  } | null;
 };
 
 export type GithubCommitPullRequestsQueryResponse = GraphQlQueryResponseData & {
@@ -73,10 +73,10 @@ export type GithubCommitPullRequestsQueryResponse = GraphQlQueryResponseData & {
               commit?: {
                 committedDate?: string | null;
               } | null;
-            }>;
+            } | null> | null;
           } | null;
-        }>;
-      };
+        } | null> | null;
+      } | null;
     } | null;
-  };
+  } | null;
 };

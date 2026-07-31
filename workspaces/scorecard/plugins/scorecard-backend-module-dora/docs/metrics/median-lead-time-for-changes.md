@@ -14,6 +14,8 @@ Deployments are processed as chronological pairs (`previousDeployment` -> `curre
 
 This metric assumes deployments form a single chronological stream for the entity. If deployments from multiple branches or release trains are mixed in the same stream, `previousDeployment` and `currentDeployment` can belong to different branches, which may produce incorrect lead-time pairing and noisy results.
 
+If fewer than two successful production deployments exist in the window, or no pull requests with a measurable lead time are found between deployments, calculation fails with an error for now.
+
 ## Default thresholds
 
 Thresholds are applied to the computed value in hours:

@@ -270,31 +270,28 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       );
     });
 
-    it('should return 0 when no deployments found', async () => {
+    it('should throw when fewer than 2 successful production deployments are found', async () => {
       jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
         deployments: [],
       });
-      jest.mocked(rangePullRequestsCollector.collect).mockResolvedValueOnce({
-        pullRequests: [],
-      });
 
-      const results = await provider.calculateMetrics(mockEntity);
-
-      expect(results.get('dora.medianLeadTimeForChanges')).toBe(0);
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /need at least 2 successful production deployments/,
+      );
       expect(rangePullRequestsCollector.collect).not.toHaveBeenCalled();
     });
 
-    it('should return 0 when no pull requests found', async () => {
+    it('should throw when no pull requests with measurable lead time are found', async () => {
       jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
         deployments,
       });
-      jest.mocked(rangePullRequestsCollector.collect).mockResolvedValueOnce({
+      jest.mocked(rangePullRequestsCollector.collect).mockResolvedValue({
         pullRequests: [],
       });
 
-      const results = await provider.calculateMetrics(mockEntity);
-
-      expect(results.get('dora.medianLeadTimeForChanges')).toBe(0);
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /no pull requests with a measurable lead time/,
+      );
     });
 
     it('should fail when deployments are not sorted ascending by createdAt', async () => {

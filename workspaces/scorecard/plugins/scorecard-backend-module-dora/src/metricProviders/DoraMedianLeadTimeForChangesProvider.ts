@@ -164,8 +164,9 @@ export class DoraMedianLeadTimeForChangesProvider
     });
 
     if (deployments.length < 2) {
-      results.set(this.getProviderId(), 0);
-      return results;
+      throw new Error(
+        `Unable to calculate median lead time for changes: need at least 2 successful production deployments in the last ${DORA_TIME_WINDOW_DAYS} days, found ${deployments.length}`,
+      );
     }
 
     const leadTimeHours: number[] = [];
@@ -209,8 +210,9 @@ export class DoraMedianLeadTimeForChangesProvider
     }
 
     if (leadTimeHours.length === 0) {
-      results.set(this.getProviderId(), 0);
-      return results;
+      throw new Error(
+        'Unable to calculate median lead time for changes: no pull requests with a measurable lead time were found between deployments',
+      );
     }
 
     const median = calculateMedian(leadTimeHours);

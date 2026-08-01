@@ -44,7 +44,7 @@ export class JiraIncidentsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collects Jira incident lifecycle data.';
+    return 'Collects Jira incidents.';
   }
 
   getInputSchema() {

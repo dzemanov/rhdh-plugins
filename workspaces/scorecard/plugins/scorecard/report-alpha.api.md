@@ -169,6 +169,10 @@ export const scorecardTranslationRef: TranslationRef<
     readonly 'metric.dora.deploymentFrequency.description': string;
     readonly 'metric.dora.medianLeadTimeForChanges.title': string;
     readonly 'metric.dora.medianLeadTimeForChanges.description': string;
+    readonly 'metric.dora.changeFailureRate.title': string;
+    readonly 'metric.dora.changeFailureRate.description': string;
+    readonly 'metric.dora.meanTimeToRestore.title': string;
+    readonly 'metric.dora.meanTimeToRestore.description': string;
     readonly 'metric.github.openPRs.title': string;
     readonly 'metric.github.openPRs.description': string;
     readonly 'metric.jira.openIssues.title': string;

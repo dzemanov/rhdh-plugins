@@ -74,9 +74,10 @@ scorecard:
   plugins:
     dora:
       meanTimeToRestore:
-        collectors:
-          incidents:
-            id: jira:incidents
+        options:
+          collectors:
+            incidents:
+              id: jira:incidents
 ```
 
 ### Use custom incidents collector
@@ -86,9 +87,10 @@ scorecard:
   plugins:
     dora:
       meanTimeToRestore:
-        collectors:
-          incidents:
-            id: customDatasource:incidents
-            input:
-              # optional collector-specific extra input
+        options:
+          collectors:
+            incidents:
+              id: customDatasource:incidents
+              input:
+                # optional collector-specific extra input
 ```

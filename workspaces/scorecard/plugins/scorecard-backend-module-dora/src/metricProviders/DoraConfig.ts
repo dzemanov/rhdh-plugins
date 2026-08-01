@@ -23,6 +23,7 @@ import {
 import {
   DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+  DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
   DORA_DEFAULT_PRODUCTION_ENVIRONMENTS,
 } from '../constants';
 import { JsonValue } from '@backstage/types';
@@ -35,6 +36,16 @@ export type DoraDeploymentFrequencyConfig = {
 export type DoraMedianLeadTimeForChangesConfig = {
   deploymentsCollector: CollectorConfig;
   deploymentPullRequestsCollector: CollectorConfig;
+  productionEnvironments: string[];
+};
+
+export type DoraMeanTimeToRestoreConfig = {
+  incidentsCollector: CollectorConfig;
+};
+
+export type DoraChangeFailureRateConfig = {
+  deploymentsCollector: CollectorConfig;
+  incidentsCollector: CollectorConfig;
   productionEnvironments: string[];
 };
 
@@ -206,6 +217,49 @@ export function parseDoraMedianLeadTimeForChangesConfig(
       config,
       `${providerConfigPath}.options.collectors.deploymentPullRequests`,
       DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
+    ),
+    productionEnvironments: parseProductionEnvironments(
+      config,
+      providerConfigPath,
+    ),
+  };
+}
+
+/**
+ * Parses mean-time-to-restore provider config from the root Backstage config.
+ */
+export function parseDoraMeanTimeToRestoreConfig(
+  config: Config,
+): DoraMeanTimeToRestoreConfig {
+  const providerConfigPath = 'scorecard.plugins.dora.meanTimeToRestore';
+
+  return {
+    incidentsCollector: parseCollectorConfig(
+      config,
+      `${providerConfigPath}.options.collectors.incidents`,
+      DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
+    ),
+  };
+}
+
+/**
+ * Parses change-failure-rate provider config from the root Backstage config.
+ */
+export function parseDoraChangeFailureRateConfig(
+  config: Config,
+): DoraChangeFailureRateConfig {
+  const providerConfigPath = 'scorecard.plugins.dora.changeFailureRate';
+
+  return {
+    deploymentsCollector: parseCollectorConfig(
+      config,
+      `${providerConfigPath}.options.collectors.deployments`,
+      DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
+    ),
+    incidentsCollector: parseCollectorConfig(
+      config,
+      `${providerConfigPath}.options.collectors.incidents`,
+      DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
     ),
     productionEnvironments: parseProductionEnvironments(
       config,

@@ -63,16 +63,32 @@ export interface Config {
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
         meanTimeToRestore?: {
-          collectors?: {
-            incidents?: CollectorInput;
+          /**
+           * Provider-specific options.
+           */
+          options?: {
+            collectors?: {
+              incidents?: CollectorConfig;
+            };
           };
           thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;
         };
         changeFailureRate?: {
-          collectors?: {
-            deployments?: CollectorInput;
-            incidents?: CollectorInput;
+          /**
+           * Provider-specific options.
+           */
+          options?: {
+            /**
+             * Environment names treated as production (case-insensitive).
+             * Missing/unknown deployment environments still count as production.
+             * @default ['production']
+             */
+            productionEnvironments?: string[];
+            collectors?: {
+              deployments?: CollectorConfig;
+              incidents?: CollectorConfig;
+            };
           };
           thresholds?: ThresholdConfig;
           schedule?: SchedulerServiceTaskScheduleDefinitionConfig;

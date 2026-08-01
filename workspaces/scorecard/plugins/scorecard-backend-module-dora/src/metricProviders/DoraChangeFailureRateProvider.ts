@@ -21,11 +21,7 @@ import {
   type ScorecardCollectorsService,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import {
-  DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-  DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
-  DORA_TIME_WINDOW_DAYS,
-} from '../constants';
+import { DORA_TIME_WINDOW_DAYS } from '../constants';
 import {
   deploymentsCollectorInputSchema,
   deploymentsCollectorOutputSchema,
@@ -34,29 +30,25 @@ import {
   incidentsCollectorInputSchema,
   incidentsCollectorOutputSchema,
 } from './schemas/incidentSchemas';
-import { DEFAULT_DORA_CHANGE_FAILURE_RATE_THRESHOLDS } from './DoraConfig';
+import {
+  DEFAULT_DORA_CHANGE_FAILURE_RATE_THRESHOLDS,
+  type DoraChangeFailureRateConfig,
+  parseDoraChangeFailureRateConfig,
+} from './DoraConfig';
+import { isSuccessfulProductionDeployment } from './utils/deploymentFilterUtils';
 
 type DoraChangeFailureRateProviderOptions = {
   collectorsService: ScorecardCollectorsService;
-  deploymentsCollectorId: string;
-  incidentsCollectorId: string;
-  deploymentsCollectorInput: Record<string, unknown>;
-  incidentsCollectorInput: Record<string, unknown>;
+  config: DoraChangeFailureRateConfig;
 };
 
 export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
   private readonly collectorsService: ScorecardCollectorsService;
-  private readonly deploymentsCollectorId: string;
-  private readonly incidentsCollectorId: string;
-  private readonly deploymentsCollectorInput: Record<string, unknown>;
-  private readonly incidentsCollectorInput: Record<string, unknown>;
+  private readonly config: DoraChangeFailureRateConfig;
 
   private constructor(options: DoraChangeFailureRateProviderOptions) {
     this.collectorsService = options.collectorsService;
-    this.deploymentsCollectorId = options.deploymentsCollectorId;
-    this.incidentsCollectorId = options.incidentsCollectorId;
-    this.deploymentsCollectorInput = options.deploymentsCollectorInput;
-    this.incidentsCollectorInput = options.incidentsCollectorInput;
+    this.config = options.config;
   }
 
   static fromConfig(
@@ -67,22 +59,7 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
   ): DoraChangeFailureRateProvider {
     return new DoraChangeFailureRateProvider({
       collectorsService: options.collectorsService,
-      deploymentsCollectorId:
-        config.getOptionalString(
-          'scorecard.plugins.dora.changeFailureRate.collectors.deployments.id',
-        ) ?? DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
-      incidentsCollectorId:
-        config.getOptionalString(
-          'scorecard.plugins.dora.changeFailureRate.collectors.incidents.id',
-        ) ?? DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
-      deploymentsCollectorInput:
-        config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.changeFailureRate.collectors.deployments.input',
-        ) ?? {},
-      incidentsCollectorInput:
-        config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.changeFailureRate.collectors.incidents.input',
-        ) ?? {},
+      config: parseDoraChangeFailureRateConfig(config),
     });
   }
 
@@ -124,14 +101,14 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       typeof deploymentsCollectorInputSchema,
       typeof deploymentsCollectorOutputSchema
     >({
-      collectorId: this.deploymentsCollectorId,
+      collectorId: this.config.deploymentsCollector.id,
       contract: {
         inputSchema: deploymentsCollectorInputSchema,
         outputSchema: deploymentsCollectorOutputSchema,
       },
       entity,
       input: {
-        ...this.deploymentsCollectorInput,
+        ...this.config.deploymentsCollector.input,
         from: from.toISOString(),
         to: to.toISOString(),
       },
@@ -141,32 +118,26 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       typeof incidentsCollectorInputSchema,
       typeof incidentsCollectorOutputSchema
     >({
-      collectorId: this.incidentsCollectorId,
+      collectorId: this.config.incidentsCollector.id,
       contract: {
         inputSchema: incidentsCollectorInputSchema,
         outputSchema: incidentsCollectorOutputSchema,
       },
       entity,
       input: {
-        ...this.incidentsCollectorInput,
+        ...this.config.incidentsCollector.input,
         from: from.toISOString(),
         to: to.toISOString(),
       },
     });
 
     const successfulProductionDeployments =
-      deploymentsCollected.deployments.filter(deployment => {
-        if (deployment.result !== 'success') {
-          return false;
-        }
-        if (
-          deployment.environment &&
-          deployment.environment.toLowerCase() !== 'production'
-        ) {
-          return false;
-        }
-        return true;
-      });
+      deploymentsCollected.deployments.filter(deployment =>
+        isSuccessfulProductionDeployment(
+          deployment,
+          this.config.productionEnvironments,
+        ),
+      );
 
     if (successfulProductionDeployments.length < 2) {
       results.set(this.getProviderId(), 0);

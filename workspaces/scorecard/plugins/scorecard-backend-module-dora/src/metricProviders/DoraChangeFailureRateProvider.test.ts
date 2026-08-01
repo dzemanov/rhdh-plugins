@@ -145,17 +145,20 @@ describe('DoraChangeFailureRateProvider', () => {
             plugins: {
               dora: {
                 changeFailureRate: {
-                  collectors: {
-                    deployments: {
-                      id: customDeploymentsCollectorId,
-                      input: {
-                        customDeploymentsInputLabel: 'deployments-custom-input',
+                  options: {
+                    collectors: {
+                      deployments: {
+                        id: customDeploymentsCollectorId,
+                        input: {
+                          customDeploymentsInputLabel:
+                            'deployments-custom-input',
+                        },
                       },
-                    },
-                    incidents: {
-                      id: customIncidentsCollectorId,
-                      input: {
-                        customIncidentsInputLabel: 'incidents-custom-input',
+                      incidents: {
+                        id: customIncidentsCollectorId,
+                        input: {
+                          customIncidentsInputLabel: 'incidents-custom-input',
+                        },
                       },
                     },
                   },

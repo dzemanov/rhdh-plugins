@@ -100,11 +100,13 @@ describe('DoraMeanTimeToRestoreProvider', () => {
             plugins: {
               dora: {
                 meanTimeToRestore: {
-                  collectors: {
-                    incidents: {
-                      id: customIncidentsCollectorId,
-                      input: {
-                        customIncidentsInputLabel: 'incidents-custom-input',
+                  options: {
+                    collectors: {
+                      incidents: {
+                        id: customIncidentsCollectorId,
+                        input: {
+                          customIncidentsInputLabel: 'incidents-custom-input',
+                        },
                       },
                     },
                   },

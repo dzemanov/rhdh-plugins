@@ -21,32 +21,30 @@ import {
   type ScorecardCollectorsService,
   MetricProvider,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import {
-  DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
-  DORA_TIME_WINDOW_DAYS,
-} from '../constants';
+import { DORA_TIME_WINDOW_DAYS } from '../constants';
 import {
   incidentsCollectorInputSchema,
   incidentsCollectorOutputSchema,
 } from './schemas/incidentSchemas';
 import { calculateMean } from './utils/calculationUtils';
-import { DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS } from './DoraConfig';
+import {
+  DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS,
+  type DoraMeanTimeToRestoreConfig,
+  parseDoraMeanTimeToRestoreConfig,
+} from './DoraConfig';
 
 type DoraMeanTimeToRestoreProviderOptions = {
   collectorsService: ScorecardCollectorsService;
-  incidentsCollectorId: string;
-  incidentsCollectorInput: Record<string, unknown>;
+  config: DoraMeanTimeToRestoreConfig;
 };
 
 export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
   private readonly collectorsService: ScorecardCollectorsService;
-  private readonly incidentsCollectorId: string;
-  private readonly incidentsCollectorInput: Record<string, unknown>;
+  private readonly config: DoraMeanTimeToRestoreConfig;
 
   private constructor(options: DoraMeanTimeToRestoreProviderOptions) {
     this.collectorsService = options.collectorsService;
-    this.incidentsCollectorId = options.incidentsCollectorId;
-    this.incidentsCollectorInput = options.incidentsCollectorInput;
+    this.config = options.config;
   }
 
   static fromConfig(
@@ -57,14 +55,7 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
   ): DoraMeanTimeToRestoreProvider {
     return new DoraMeanTimeToRestoreProvider({
       collectorsService: options.collectorsService,
-      incidentsCollectorId:
-        config.getOptionalString(
-          'scorecard.plugins.dora.meanTimeToRestore.collectors.incidents.id',
-        ) ?? DORA_DEFAULT_INCIDENTS_COLLECTOR_ID,
-      incidentsCollectorInput:
-        config.getOptional<Record<string, unknown>>(
-          'scorecard.plugins.dora.meanTimeToRestore.collectors.incidents.input',
-        ) ?? {},
+      config: parseDoraMeanTimeToRestoreConfig(config),
     });
   }
 
@@ -106,14 +97,14 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
       typeof incidentsCollectorInputSchema,
       typeof incidentsCollectorOutputSchema
     >({
-      collectorId: this.incidentsCollectorId,
+      collectorId: this.config.incidentsCollector.id,
       contract: {
         inputSchema: incidentsCollectorInputSchema,
         outputSchema: incidentsCollectorOutputSchema,
       },
       entity,
       input: {
-        ...this.incidentsCollectorInput,
+        ...this.config.incidentsCollector.input,
         from: from.toISOString(),
         to: to.toISOString(),
       },

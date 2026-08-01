@@ -21,6 +21,32 @@ The result is:
 This metric assumes deployments form a single chronological stream for the entity.
 If deployments from multiple branches or release trains are mixed, interval pairing may not reflect actual release flow and can produce noisy change-failure-rate results.
 
+## Options
+
+Provider-specific settings are under `options`:
+
+```yaml
+scorecard:
+  plugins:
+    dora:
+      changeFailureRate:
+        options:
+          productionEnvironments:
+            - production
+            - prod
+          collectors:
+            deployments:
+              id: github:deployments
+            incidents:
+              id: jira:incidents
+```
+
+- `productionEnvironments`
+  - Default: `['production']`
+  - Matching is case-insensitive; a deployment counts if its environment matches **any** configured name
+  - Missing/unknown `environment` still counts as production
+- `collectors` — see [Collectors](#collectors)
+
 ## Default thresholds
 
 Thresholds are applied to the computed percentage value:
@@ -110,11 +136,12 @@ scorecard:
   plugins:
     dora:
       changeFailureRate:
-        collectors:
-          deployments:
-            id: github:deployments
-          incidents:
-            id: jira:incidents
+        options:
+          collectors:
+            deployments:
+              id: github:deployments
+            incidents:
+              id: jira:incidents
 ```
 
 ### Use GitHub workflow runs for deployments
@@ -126,13 +153,14 @@ scorecard:
   plugins:
     dora:
       changeFailureRate:
-        collectors:
-          deployments:
-            id: github:deploymentWorkflowRuns
-            input:
-              workflowName: Custom deployment name
-          incidents:
-            id: jira:incidents
+        options:
+          collectors:
+            deployments:
+              id: github:deploymentWorkflowRuns
+              input:
+                workflowName: Custom deployment name
+            incidents:
+              id: jira:incidents
 ```
 
 ### Use custom collectors
@@ -142,13 +170,14 @@ scorecard:
   plugins:
     dora:
       changeFailureRate:
-        collectors:
-          deployments:
-            id: customDatasource:deployments
-            input:
-              # optional collector-specific extra input
-          incidents:
-            id: customDatasource:incidents
-            input:
-              # optional collector-specific extra input
+        options:
+          collectors:
+            deployments:
+              id: customDatasource:deployments
+              input:
+                # optional collector-specific extra input
+            incidents:
+              id: customDatasource:incidents
+              input:
+                # optional collector-specific extra input
 ```

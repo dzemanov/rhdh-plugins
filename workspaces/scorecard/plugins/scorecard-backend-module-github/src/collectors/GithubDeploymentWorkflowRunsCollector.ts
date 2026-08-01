@@ -55,7 +55,7 @@ export class GithubDeploymentWorkflowRunsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collects data from GitHub Actions for CI/CD pipeline deployment events.';
+    return 'Collects deployments from GitHub Actions.';
   }
 
   getInputSchema() {

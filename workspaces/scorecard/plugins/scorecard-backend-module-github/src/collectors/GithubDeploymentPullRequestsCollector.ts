@@ -63,7 +63,7 @@ export class GithubDeploymentPullRequestsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collects GitHub pull requests included between two deployment commits.';
+    return 'Collects pull requests linked to deployments.';
   }
 
   getInputSchema() {

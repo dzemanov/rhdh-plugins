@@ -54,7 +54,7 @@ export class GithubDeploymentsCollector
   }
 
   getCollectorDescription(): string {
-    return 'Collects data from GitHub Deployments for production deployment events.';
+    return 'Collects GitHub deployments.';
   }
 
   getInputSchema() {

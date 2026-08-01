@@ -25,8 +25,8 @@ const _default: OverridableFrontendPlugin<
   {
     root: RouteRef<undefined>;
     drillDown: RouteRef<{
-      metricId: string;
       aggregationId: string;
+      metricId: string;
     }>;
   },
   {},
@@ -58,6 +58,7 @@ const _default: OverridableFrontendPlugin<
         title?: string | undefined;
       };
       output:
+        | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
         | ExtensionDataRef<string, 'core.routing.path', {}>
         | ExtensionDataRef<
             RouteRef_2<AnyRouteRefParams>,
@@ -66,7 +67,6 @@ const _default: OverridableFrontendPlugin<
               optional: true;
             }
           >
-        | ExtensionDataRef<JSX_2.Element, 'core.reactElement', {}>
         | ExtensionDataRef<
             string,
             'core.title',

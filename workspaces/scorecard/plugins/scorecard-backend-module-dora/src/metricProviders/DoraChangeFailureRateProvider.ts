@@ -36,6 +36,7 @@ import {
   parseDoraChangeFailureRateConfig,
 } from './DoraConfig';
 import { isSuccessfulProductionDeployment } from './utils/deploymentFilterUtils';
+import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 
 type DoraChangeFailureRateProviderOptions = {
   collectorsService: ScorecardCollectorsService;
@@ -87,7 +88,7 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
     return {
-      'metadata.annotations.scorecard.io/dora': 'true',
+      'metadata.annotations.scorecard.io/dora': CATALOG_FILTER_EXISTS,
     };
   }
 

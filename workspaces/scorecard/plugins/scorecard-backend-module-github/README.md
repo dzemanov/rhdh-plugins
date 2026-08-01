@@ -77,7 +77,7 @@ This module registers collectors to collect data from GitHub to be used by compo
 
   - `github:deployments`
   - `github:deploymentWorkflowRuns`
-  - `github:deploymentRangePullRequests`
+  - `github:deploymentPullRequests`
 
 ### Collector contracts
 
@@ -118,7 +118,7 @@ metadata:
 - **Workflow selection**
   - `workflowName` can match the workflow display name, the full workflow path (for example `.github/workflows/deploy.yml`), or a filename suffix (for example `deploy.yml`).
 
-`github:deploymentRangePullRequests`
+`github:deploymentPullRequests`
 
 - **Input schema**
   - `baseCommitSha: string` (non-empty)

@@ -90,8 +90,8 @@ scorecard:
               id: customDatasource:deployments
               input:
                 # merged with generated from/to window
-            deploymentRangePullRequests:
-              id: customDatasource:deploymentRangePullRequests
+            deploymentPullRequests:
+              id: customDatasource:deploymentPullRequests
               input:
                 # merged with generated baseCommitSha/headCommitSha
 ```

@@ -17,10 +17,10 @@
 import { mockServices } from '@backstage/backend-test-utils';
 import { ConfigReader } from '@backstage/config';
 import { GithubClient } from '../github/GithubClient';
-import { GithubDeploymentRangePullRequestsCollector } from './GithubDeploymentRangePullRequestsCollector';
+import { GithubDeploymentPullRequestsCollector } from './GithubDeploymentPullRequestsCollector';
 
-describe('GithubDeploymentRangePullRequestsCollector', () => {
-  it('collects pull requests for deployment commit range', async () => {
+describe('GithubDeploymentPullRequestsCollector', () => {
+  it('collects pull requests between two deployment commits', async () => {
     const getCommitShasBetweenSpy = jest
       .spyOn(GithubClient.prototype, 'getCommitShasBetween')
       .mockResolvedValue(['sha-two', 'sha-three']);
@@ -56,7 +56,7 @@ describe('GithubDeploymentRangePullRequestsCollector', () => {
       );
     const mockedLogger = mockServices.logger.mock();
 
-    const collector = GithubDeploymentRangePullRequestsCollector.fromConfig(
+    const collector = GithubDeploymentPullRequestsCollector.fromConfig(
       new ConfigReader({
         integrations: {
           github: [

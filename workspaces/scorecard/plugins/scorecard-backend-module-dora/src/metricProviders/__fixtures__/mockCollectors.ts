@@ -22,8 +22,8 @@ import {
 } from '../schemas/deploymentSchemas';
 import {
   PullRequest,
-  rangePullRequestsCollectorInputSchema,
-  rangePullRequestsCollectorOutputSchema,
+  deploymentPullRequestsCollectorInputSchema,
+  deploymentPullRequestsCollectorOutputSchema,
 } from '../schemas/pullRequestSchemas';
 
 export function buildMockDeploymentsCollector(options: {
@@ -43,19 +43,18 @@ export function buildMockDeploymentsCollector(options: {
   };
 }
 
-export function buildMockRangePullRequestsCollector(options: {
+export function buildMockDeploymentPullRequestsCollector(options: {
   pullRequests: PullRequest[];
   collectorId?: string;
 }): Collector {
-  const { pullRequests, collectorId = 'github:deploymentRangePullRequests' } =
+  const { pullRequests, collectorId = 'github:deploymentPullRequests' } =
     options;
 
   return {
     getCollectorId: () => collectorId,
-    getCollectorDescription: () =>
-      'mock deployment range pull requests collector',
-    getInputSchema: () => rangePullRequestsCollectorInputSchema,
-    getOutputSchema: () => rangePullRequestsCollectorOutputSchema,
+    getCollectorDescription: () => 'mock deployment pull requests collector',
+    getInputSchema: () => deploymentPullRequestsCollectorInputSchema,
+    getOutputSchema: () => deploymentPullRequestsCollectorOutputSchema,
     collect: jest.fn(async () => ({
       pullRequests,
     })),

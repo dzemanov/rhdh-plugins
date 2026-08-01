@@ -23,8 +23,8 @@ import {
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { DORA_TIME_WINDOW_DAYS } from '../constants';
 import {
-  rangePullRequestsCollectorInputSchema,
-  rangePullRequestsCollectorOutputSchema,
+  deploymentPullRequestsCollectorInputSchema,
+  deploymentPullRequestsCollectorOutputSchema,
 } from './schemas/pullRequestSchemas';
 import {
   deploymentsCollectorInputSchema,
@@ -142,17 +142,17 @@ export class DoraMedianLeadTimeForChangesProvider
       const deployment = deployments[deploymentIndex];
 
       const pullRequestsCollected = await this.collectorsService.collect<
-        typeof rangePullRequestsCollectorInputSchema,
-        typeof rangePullRequestsCollectorOutputSchema
+        typeof deploymentPullRequestsCollectorInputSchema,
+        typeof deploymentPullRequestsCollectorOutputSchema
       >({
-        collectorId: this.config.deploymentRangePullRequestsCollector.id,
+        collectorId: this.config.deploymentPullRequestsCollector.id,
         contract: {
-          inputSchema: rangePullRequestsCollectorInputSchema,
-          outputSchema: rangePullRequestsCollectorOutputSchema,
+          inputSchema: deploymentPullRequestsCollectorInputSchema,
+          outputSchema: deploymentPullRequestsCollectorOutputSchema,
         },
         entity,
         input: {
-          ...this.config.deploymentRangePullRequestsCollector.input,
+          ...this.config.deploymentPullRequestsCollector.input,
           baseCommitSha: previousDeployment.commitSha,
           headCommitSha: deployment.commitSha,
         },

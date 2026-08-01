@@ -21,7 +21,7 @@ import {
   ThresholdConfig,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
-  DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+  DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
   DORA_DEFAULT_PRODUCTION_ENVIRONMENTS,
 } from '../constants';
@@ -34,7 +34,7 @@ export type DoraDeploymentFrequencyConfig = {
 
 export type DoraMedianLeadTimeForChangesConfig = {
   deploymentsCollector: CollectorConfig;
-  deploymentRangePullRequestsCollector: CollectorConfig;
+  deploymentPullRequestsCollector: CollectorConfig;
   productionEnvironments: string[];
 };
 
@@ -152,10 +152,10 @@ export function parseDoraMedianLeadTimeForChangesConfig(
       `${providerConfigPath}.options.collectors.deployments`,
       DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
     ),
-    deploymentRangePullRequestsCollector: parseCollectorConfig(
+    deploymentPullRequestsCollector: parseCollectorConfig(
       config,
-      `${providerConfigPath}.options.collectors.deploymentRangePullRequests`,
-      DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+      `${providerConfigPath}.options.collectors.deploymentPullRequests`,
+      DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
     ),
     productionEnvironments: parseProductionEnvironments(
       config,

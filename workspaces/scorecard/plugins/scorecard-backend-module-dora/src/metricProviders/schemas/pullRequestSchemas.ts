@@ -16,7 +16,7 @@
 
 import { z } from 'zod';
 
-export const rangePullRequestsCollectorInputSchema = z
+export const deploymentPullRequestsCollectorInputSchema = z
   .object({
     baseCommitSha: z.string().min(1),
     headCommitSha: z.string().min(1),
@@ -31,7 +31,7 @@ const pullRequestSchema = z
   .passthrough();
 export type PullRequest = z.infer<typeof pullRequestSchema>;
 
-export const rangePullRequestsCollectorOutputSchema = z
+export const deploymentPullRequestsCollectorOutputSchema = z
   .object({
     pullRequests: z.array(pullRequestSchema),
   })

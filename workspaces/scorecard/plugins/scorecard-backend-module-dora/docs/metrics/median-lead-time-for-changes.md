@@ -32,8 +32,8 @@ scorecard:
           collectors:
             deployments:
               id: github:deployments
-            deploymentRangePullRequests:
-              id: github:deploymentRangePullRequests
+            deploymentPullRequests:
+              id: github:deploymentPullRequests
 ```
 
 - `productionEnvironments`
@@ -102,15 +102,15 @@ Ordering requirement:
 
 Collects pull requests included in the commit range between two deployments (`baseCommitSha` -> `headCommitSha`) and provides their first commit timestamps for lead-time calculation.
 
-Available pull-request-range collectors:
+Available pull request collectors:
 
-- `github:deploymentRangePullRequests` (default)
+- `github:deploymentPullRequests` (default)
 
 For more information on the collector above, see collector details in [scorecard-backend-module-github README](../../../scorecard-backend-module-github/README.md).
 
 **Important:** This collector requires that you have `@red-hat-developer-hub/backstage-plugin-scorecard-backend-module-github` installed.
 
-Required entity annotations for default `github:deploymentRangePullRequests` collector:
+Required entity annotations for default `github:deploymentPullRequests` collector:
 
 ```yaml
 metadata:
@@ -148,8 +148,8 @@ scorecard:
           collectors:
             deployments:
               id: github:deployments
-            deploymentRangePullRequests:
-              id: github:deploymentRangePullRequests
+            deploymentPullRequests:
+              id: github:deploymentPullRequests
 ```
 
 ### Use GitHub workflow runs for deployments
@@ -167,8 +167,8 @@ scorecard:
               id: github:deploymentWorkflowRuns
               input:
                 workflowName: deploy.yml
-            deploymentRangePullRequests:
-              id: github:deploymentRangePullRequests
+            deploymentPullRequests:
+              id: github:deploymentPullRequests
 ```
 
 ### Use custom collectors
@@ -184,8 +184,8 @@ scorecard:
               id: customDatasource:deployments
               input:
                 # optional collector-specific extra input
-            deploymentRangePullRequests:
-              id: customDatasource:deploymentRangePullRequests
+            deploymentPullRequests:
+              id: customDatasource:deploymentPullRequests
               input:
                 # optional collector-specific extra input
 ```

@@ -23,11 +23,11 @@ import { z } from 'zod';
 import { GithubClient } from '../github/GithubClient';
 import { getRepositoryInformationFromEntity } from '../github/utils';
 
-export class GithubDeploymentRangePullRequestsCollector
+export class GithubDeploymentPullRequestsCollector
   implements
     Collector<
-      (typeof GithubDeploymentRangePullRequestsCollector)['inputSchema'],
-      (typeof GithubDeploymentRangePullRequestsCollector)['outputSchema']
+      (typeof GithubDeploymentPullRequestsCollector)['inputSchema'],
+      (typeof GithubDeploymentPullRequestsCollector)['outputSchema']
     >
 {
   static readonly inputSchema = z.object({
@@ -54,33 +54,33 @@ export class GithubDeploymentRangePullRequestsCollector
   static fromConfig(
     config: Config,
     options: { logger: LoggerService },
-  ): GithubDeploymentRangePullRequestsCollector {
-    return new GithubDeploymentRangePullRequestsCollector(config, options);
+  ): GithubDeploymentPullRequestsCollector {
+    return new GithubDeploymentPullRequestsCollector(config, options);
   }
 
   getCollectorId(): string {
-    return 'github:deploymentRangePullRequests';
+    return 'github:deploymentPullRequests';
   }
 
   getCollectorDescription(): string {
-    return 'Collects GitHub pull requests included in a deployment commit range.';
+    return 'Collects GitHub pull requests included between two deployment commits.';
   }
 
   getInputSchema() {
-    return GithubDeploymentRangePullRequestsCollector.inputSchema;
+    return GithubDeploymentPullRequestsCollector.inputSchema;
   }
 
   getOutputSchema() {
-    return GithubDeploymentRangePullRequestsCollector.outputSchema;
+    return GithubDeploymentPullRequestsCollector.outputSchema;
   }
 
   async collect(options: {
     entity: Entity;
     input: z.infer<
-      (typeof GithubDeploymentRangePullRequestsCollector)['inputSchema']
+      (typeof GithubDeploymentPullRequestsCollector)['inputSchema']
     >;
   }): Promise<
-    z.infer<(typeof GithubDeploymentRangePullRequestsCollector)['outputSchema']>
+    z.infer<(typeof GithubDeploymentPullRequestsCollector)['outputSchema']>
   > {
     const repository = getRepositoryInformationFromEntity(options.entity);
     const { target } = getEntitySourceLocation(options.entity);

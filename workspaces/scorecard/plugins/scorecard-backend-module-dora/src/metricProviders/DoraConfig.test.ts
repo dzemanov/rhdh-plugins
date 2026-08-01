@@ -16,7 +16,7 @@
 
 import { ConfigReader } from '@backstage/config';
 import {
-  DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+  DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
   DORA_DEFAULT_PRODUCTION_ENVIRONMENTS,
 } from '../constants';
@@ -99,8 +99,8 @@ describe('DoraConfig', () => {
           id: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
           input: {},
         },
-        deploymentRangePullRequestsCollector: {
-          id: DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+        deploymentPullRequestsCollector: {
+          id: DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
           input: {},
         },
         productionEnvironments: DORA_DEFAULT_PRODUCTION_ENVIRONMENTS,
@@ -122,9 +122,9 @@ describe('DoraConfig', () => {
                           id: 'custom:deployments',
                           input: { flag: true },
                         },
-                        deploymentRangePullRequests: {
-                          id: 'custom:range-prs',
-                          input: { label: 'range' },
+                        deploymentPullRequests: {
+                          id: 'custom:deployment-prs',
+                          input: { label: 'prs' },
                         },
                       },
                     },
@@ -139,9 +139,9 @@ describe('DoraConfig', () => {
           id: 'custom:deployments',
           input: { flag: true },
         },
-        deploymentRangePullRequestsCollector: {
-          id: 'custom:range-prs',
-          input: { label: 'range' },
+        deploymentPullRequestsCollector: {
+          id: 'custom:deployment-prs',
+          input: { label: 'prs' },
         },
         productionEnvironments: ['prod'],
       });

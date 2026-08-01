@@ -17,13 +17,13 @@
 import { ConfigReader } from '@backstage/config';
 import {
   buildMockDeploymentsCollector,
-  buildMockRangePullRequestsCollector,
+  buildMockDeploymentPullRequestsCollector,
   buildMockCollectorsService,
   mockEntity,
 } from './__fixtures__';
 import { DoraMedianLeadTimeForChangesProvider } from './DoraMedianLeadTimeForChangesProvider';
 import {
-  DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+  DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
   DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
 } from '../constants';
 import { Deployment } from './schemas/deploymentSchemas';
@@ -59,8 +59,8 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
   ];
 
   let deploymentsCollector: ReturnType<typeof buildMockDeploymentsCollector>;
-  let rangePullRequestsCollector: ReturnType<
-    typeof buildMockRangePullRequestsCollector
+  let deploymentPullRequestsCollector: ReturnType<
+    typeof buildMockDeploymentPullRequestsCollector
   >;
   let collectorsService: ReturnType<
     typeof buildMockCollectorsService
@@ -73,12 +73,12 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       deployments,
       collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
     });
-    rangePullRequestsCollector = buildMockRangePullRequestsCollector({
+    deploymentPullRequestsCollector = buildMockDeploymentPullRequestsCollector({
       pullRequests,
-      collectorId: DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+      collectorId: DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
     });
     ({ collectorsService, collect } = buildMockCollectorsService({
-      collectors: [deploymentsCollector, rangePullRequestsCollector],
+      collectors: [deploymentsCollector, deploymentPullRequestsCollector],
     }));
     provider = DoraMedianLeadTimeForChangesProvider.fromConfig(
       new ConfigReader({}),
@@ -112,7 +112,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       );
       expect(collect).toHaveBeenCalledWith(
         expect.objectContaining({
-          collectorId: DORA_DEFAULT_DEPLOYMENT_RANGE_PULL_REQUESTS_COLLECTOR_ID,
+          collectorId: DORA_DEFAULT_DEPLOYMENT_PULL_REQUESTS_COLLECTOR_ID,
           input: expect.objectContaining({
             baseCommitSha: 'sha-previous',
             headCommitSha: 'sha-current',
@@ -123,15 +123,16 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
 
     it('should use custom collectors and pass custom inputs', async () => {
       const customDeploymentsCollectorId = 'custom:deployments';
-      const customRangePullRequestsCollectorId = 'custom:rangePullRequests';
+      const customDeploymentPullRequestsCollectorId =
+        'custom:deploymentPullRequests';
       const customDeploymentsCollector = buildMockDeploymentsCollector({
         deployments,
         collectorId: customDeploymentsCollectorId,
       });
-      const customRangePullRequestsCollector =
-        buildMockRangePullRequestsCollector({
+      const customDeploymentPullRequestsCollector =
+        buildMockDeploymentPullRequestsCollector({
           pullRequests,
-          collectorId: customRangePullRequestsCollectorId,
+          collectorId: customDeploymentPullRequestsCollectorId,
         });
       const {
         collectorsService: customCollectorsService,
@@ -139,7 +140,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       } = buildMockCollectorsService({
         collectors: [
           customDeploymentsCollector,
-          customRangePullRequestsCollector,
+          customDeploymentPullRequestsCollector,
         ],
       });
 
@@ -159,10 +160,10 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
                             'deployments-custom-input',
                         },
                       },
-                      deploymentRangePullRequests: {
-                        id: customRangePullRequestsCollectorId,
+                      deploymentPullRequests: {
+                        id: customDeploymentPullRequestsCollectorId,
                         input: {
-                          artificialRangeLabel: 'range-custom-input',
+                          artificialPullRequestsLabel: 'prs-custom-input',
                         },
                       },
                     },
@@ -193,11 +194,11 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       );
       expect(customCollect).toHaveBeenCalledWith(
         expect.objectContaining({
-          collectorId: customRangePullRequestsCollectorId,
+          collectorId: customDeploymentPullRequestsCollectorId,
           input: expect.objectContaining({
             baseCommitSha: 'sha-previous',
             headCommitSha: 'sha-current',
-            artificialRangeLabel: 'range-custom-input',
+            artificialPullRequestsLabel: 'prs-custom-input',
           }),
         }),
       );
@@ -236,7 +237,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
         ],
       });
       jest
-        .mocked(rangePullRequestsCollector.collect)
+        .mocked(deploymentPullRequestsCollector.collect)
         .mockResolvedValueOnce({
           pullRequests: [
             { id: '501', firstCommitAt: '2026-06-10T18:00:00.000Z' }, // 6h from sha-2 createdAt
@@ -252,8 +253,8 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       const results = await provider.calculateMetrics(mockEntity);
 
       expect(results.get('dora.medianLeadTimeForChanges')).toBe(12);
-      expect(rangePullRequestsCollector.collect).toHaveBeenCalledTimes(2);
-      expect(rangePullRequestsCollector.collect).toHaveBeenNthCalledWith(
+      expect(deploymentPullRequestsCollector.collect).toHaveBeenCalledTimes(2);
+      expect(deploymentPullRequestsCollector.collect).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
           input: expect.objectContaining({
@@ -262,7 +263,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
           }),
         }),
       );
-      expect(rangePullRequestsCollector.collect).toHaveBeenNthCalledWith(
+      expect(deploymentPullRequestsCollector.collect).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
           input: expect.objectContaining({
@@ -281,7 +282,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
         /need at least 2 successful production deployments/,
       );
-      expect(rangePullRequestsCollector.collect).not.toHaveBeenCalled();
+      expect(deploymentPullRequestsCollector.collect).not.toHaveBeenCalled();
     });
 
     it('should use configured productionEnvironments when filtering deployments', async () => {
@@ -332,7 +333,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
         deployments,
       });
-      jest.mocked(rangePullRequestsCollector.collect).mockResolvedValue({
+      jest.mocked(deploymentPullRequestsCollector.collect).mockResolvedValue({
         pullRequests: [],
       });
 

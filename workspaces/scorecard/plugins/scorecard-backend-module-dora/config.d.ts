@@ -56,7 +56,7 @@ export interface Config {
             productionEnvironments?: string[];
             collectors?: {
               deployments?: CollectorConfig;
-              deploymentRangePullRequests?: CollectorConfig;
+              deploymentPullRequests?: CollectorConfig;
             };
           };
           thresholds?: ThresholdConfig;

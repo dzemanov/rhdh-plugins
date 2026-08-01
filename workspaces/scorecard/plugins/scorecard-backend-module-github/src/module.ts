@@ -21,7 +21,7 @@ import {
   scorecardCollectorsExtensionPoint,
   scorecardMetricsExtensionPoint,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import { GithubDeploymentRangePullRequestsCollector } from './collectors/GithubDeploymentRangePullRequestsCollector';
+import { GithubDeploymentPullRequestsCollector } from './collectors/GithubDeploymentPullRequestsCollector';
 import { GithubDeploymentWorkflowRunsCollector } from './collectors/GithubDeploymentWorkflowRunsCollector';
 import { GithubDeploymentsCollector } from './collectors/GithubDeploymentsCollector';
 import { GithubOpenPRsProvider } from './metricProviders/GithubOpenPRsProvider';
@@ -41,7 +41,7 @@ export const scorecardModuleGithub = createBackendModule({
         collectors.addCollector(
           GithubDeploymentsCollector.fromConfig(config),
           GithubDeploymentWorkflowRunsCollector.fromConfig(config),
-          GithubDeploymentRangePullRequestsCollector.fromConfig(config, {
+          GithubDeploymentPullRequestsCollector.fromConfig(config, {
             logger,
           }),
         );

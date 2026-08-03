@@ -89,7 +89,7 @@ const scorecardTranslationJa = createTranslationMessages({
       '過去 30 日間にコードが本番環境に正常にデプロイされた頻度を追跡します。エリートパフォーマーはオンデマンドでデプロイします (1 日に複数回)。',
     'metric.dora.deploymentFrequency.title': 'DORA - デプロイ頻度',
     'metric.dora.medianLeadTimeForChanges.description':
-      '過去 30 日間におけるコードコミットから本番デプロイまでの時間を測定します。エリートパフォーマーのリードタイムは 1 時間未満です。',
+      '過去 30 日間におけるコードコミットから本番デプロイまでの時間を測定します。エリートパフォーマーのリードタイムは 24 時間未満です。',
     'metric.dora.medianLeadTimeForChanges.title':
       'DORA - 変更のリードタイム中央値',
     'metric.filecheck.description':

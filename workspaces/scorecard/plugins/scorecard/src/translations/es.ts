@@ -92,7 +92,7 @@ const scorecardTranslationEs = createTranslationMessages({
     'metric.dora.deploymentFrequency.title':
       'DORA - Frecuencia de implementación',
     'metric.dora.medianLeadTimeForChanges.description':
-      'Mide el tiempo desde el commit del código hasta la implementación en producción durante los últimos 30 días. Los mejores equipos tienen un tiempo de entrega inferior a una hora.',
+      'Mide el tiempo desde el commit del código hasta la implementación en producción durante los últimos 30 días. Los mejores equipos tienen un tiempo de entrega inferior a 24 horas.',
     'metric.dora.medianLeadTimeForChanges.title':
       'DORA - Tiempo medio de entrega de cambios',
     'metric.filecheck.description':

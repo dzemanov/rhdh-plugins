@@ -90,7 +90,7 @@ const scorecardTranslationDe = createTranslationMessages({
       'Erfasst, wie oft Code in den letzten 30 Tagen erfolgreich in die Produktion bereitgestellt wurde. Elite-Performer stellen bei Bedarf bereit (mehrmals täglich).',
     'metric.dora.deploymentFrequency.title': 'DORA - Bereitstellungshäufigkeit',
     'metric.dora.medianLeadTimeForChanges.description':
-      'Misst die Zeit vom Code-Commit bis zur Produktionsbereitstellung über die letzten 30 Tage. Elite-Performer haben eine Vorlaufzeit von weniger als einer Stunde.',
+      'Misst die Zeit vom Code-Commit bis zur Produktionsbereitstellung über die letzten 30 Tage. Elite-Performer haben eine Vorlaufzeit von weniger als 24 Stunden.',
     'metric.dora.medianLeadTimeForChanges.title':
       'DORA - Mittlere Vorlaufzeit für Änderungen',
     'metric.filecheck.description':

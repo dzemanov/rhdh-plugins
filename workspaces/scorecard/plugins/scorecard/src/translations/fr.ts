@@ -90,7 +90,7 @@ const scorecardTranslationFr = createTranslationMessages({
       'Suit la fréquence à laquelle le code est déployé avec succès en production au cours des 30 derniers jours. Les meilleurs performeurs déploient à la demande (plusieurs fois par jour).',
     'metric.dora.deploymentFrequency.title': 'DORA - Fréquence de déploiement',
     'metric.dora.medianLeadTimeForChanges.description':
-      'Mesure le temps entre le commit du code et le déploiement en production au cours des 30 derniers jours. Les meilleurs performeurs ont un délai de livraison inférieur à une heure.',
+      'Mesure le temps entre le commit du code et le déploiement en production au cours des 30 derniers jours. Les meilleurs performeurs ont un délai de livraison inférieur à 24 heures.',
     'metric.dora.medianLeadTimeForChanges.title':
       'DORA - Délai médian de livraison des changements',
     'metric.filecheck.description':

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { mockServices } from '@backstage/backend-test-utils';
 import { ConfigReader } from '@backstage/config';
 import {
   buildMockDeploymentsCollector,
@@ -29,6 +30,8 @@ import {
 import { Deployment } from './schemas/deploymentSchemas';
 import { PullRequest } from './schemas/pullRequestSchemas';
 import { DEFAULT_DORA_MEDIAN_LEAD_TIME_THRESHOLDS } from './DoraConfig';
+
+const mockLogger = mockServices.logger.mock();
 
 describe('DoraMedianLeadTimeForChangesProvider', () => {
   const deployments: Deployment[] = [
@@ -69,6 +72,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
   let provider: DoraMedianLeadTimeForChangesProvider;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     deploymentsCollector = buildMockDeploymentsCollector({
       deployments,
       collectorId: DORA_DEFAULT_DEPLOYMENTS_COLLECTOR_ID,
@@ -84,6 +88,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       new ConfigReader({}),
       {
         collectorsService,
+        logger: mockLogger,
       },
     );
   });
@@ -175,6 +180,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
         }),
         {
           collectorsService: customCollectorsService,
+          logger: mockLogger,
         },
       );
 
@@ -302,6 +308,7 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
         }),
         {
           collectorsService,
+          logger: mockLogger,
         },
       );
 
@@ -329,6 +336,55 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
       );
     });
 
+    it('should skip failed deployment intervals and calculate median from the rest', async () => {
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '400',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '401',
+            commitSha: 'sha-2',
+            environment: 'production',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '402',
+            commitSha: 'sha-3',
+            environment: 'production',
+            createdAt: '2026-06-12T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
+      jest
+        .mocked(deploymentPullRequestsCollector.collect)
+        .mockRejectedValueOnce(new Error('GitHub compare failed'))
+        .mockResolvedValueOnce({
+          pullRequests: [
+            { id: '503', firstCommitAt: '2026-06-11T12:00:00.000Z' }, // 12h
+          ],
+        });
+
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('dora.medianLeadTimeForChanges')).toBe(12);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping deployment interval sha-1..sha-2'),
+      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('dora.medianLeadTimeForChanges'),
+      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('GitHub compare failed'),
+      );
+    });
+
     it('should throw when no pull requests with measurable lead time are found', async () => {
       jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
         deployments,
@@ -339,6 +395,21 @@ describe('DoraMedianLeadTimeForChangesProvider', () => {
 
       await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
         /no pull requests with a measurable lead time/,
+      );
+    });
+
+    it('should throw when all deployment intervals fail to collect pull requests', async () => {
+      jest
+        .mocked(deploymentPullRequestsCollector.collect)
+        .mockRejectedValue(new Error('collector unavailable'));
+
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /no pull requests with a measurable lead time/,
+      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Skipping deployment interval sha-previous..sha-current',
+        ),
       );
     });
 

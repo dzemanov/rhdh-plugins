@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+import type { LoggerService } from '@backstage/backend-plugin-api';
 import type { Config } from '@backstage/config';
-import type { Entity } from '@backstage/catalog-model';
+import { stringifyEntityRef, type Entity } from '@backstage/catalog-model';
 import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
   type ScorecardCollectorsService,
@@ -42,6 +43,7 @@ import { isSuccessfulProductionDeployment } from './utils/deploymentFilterUtils'
 type DoraMedianLeadTimeForChangesProviderOptions = {
   collectorsService: ScorecardCollectorsService;
   config: DoraMedianLeadTimeForChangesConfig;
+  logger: LoggerService;
 };
 
 export class DoraMedianLeadTimeForChangesProvider
@@ -49,21 +51,25 @@ export class DoraMedianLeadTimeForChangesProvider
 {
   private readonly collectorsService: ScorecardCollectorsService;
   private readonly config: DoraMedianLeadTimeForChangesConfig;
+  private readonly logger: LoggerService;
 
   private constructor(options: DoraMedianLeadTimeForChangesProviderOptions) {
     this.collectorsService = options.collectorsService;
     this.config = options.config;
+    this.logger = options.logger;
   }
 
   static fromConfig(
     config: Config,
     options: {
       collectorsService: ScorecardCollectorsService;
+      logger: LoggerService;
     },
   ): DoraMedianLeadTimeForChangesProvider {
     return new DoraMedianLeadTimeForChangesProvider({
       collectorsService: options.collectorsService,
       config: parseDoraMedianLeadTimeForChangesConfig(config),
+      logger: options.logger,
     });
   }
 
@@ -141,22 +147,36 @@ export class DoraMedianLeadTimeForChangesProvider
       const previousDeployment = deployments[deploymentIndex - 1];
       const deployment = deployments[deploymentIndex];
 
-      const pullRequestsCollected = await this.collectorsService.collect<
-        typeof deploymentPullRequestsCollectorInputSchema,
-        typeof deploymentPullRequestsCollectorOutputSchema
-      >({
-        collectorId: this.config.deploymentPullRequestsCollector.id,
-        contract: {
-          inputSchema: deploymentPullRequestsCollectorInputSchema,
-          outputSchema: deploymentPullRequestsCollectorOutputSchema,
-        },
-        entity,
-        input: {
-          ...this.config.deploymentPullRequestsCollector.input,
-          baseCommitSha: previousDeployment.commitSha,
-          headCommitSha: deployment.commitSha,
-        },
-      });
+      let pullRequestsCollected;
+      try {
+        pullRequestsCollected = await this.collectorsService.collect<
+          typeof deploymentPullRequestsCollectorInputSchema,
+          typeof deploymentPullRequestsCollectorOutputSchema
+        >({
+          collectorId: this.config.deploymentPullRequestsCollector.id,
+          contract: {
+            inputSchema: deploymentPullRequestsCollectorInputSchema,
+            outputSchema: deploymentPullRequestsCollectorOutputSchema,
+          },
+          entity,
+          input: {
+            ...this.config.deploymentPullRequestsCollector.input,
+            baseCommitSha: previousDeployment.commitSha,
+            headCommitSha: deployment.commitSha,
+          },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Skipping deployment interval ${previousDeployment.commitSha}..${
+            deployment.commitSha
+          } for ${stringifyEntityRef(
+            entity,
+          )} while calculating ${this.getProviderId()}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+        continue;
+      }
 
       const deployedAtTimestamp = new Date(deployment.createdAt).getTime();
       for (const pullRequest of pullRequestsCollected.pullRequests) {

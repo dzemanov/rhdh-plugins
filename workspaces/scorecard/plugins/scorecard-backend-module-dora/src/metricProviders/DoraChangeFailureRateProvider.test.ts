@@ -242,25 +242,18 @@ describe('DoraChangeFailureRateProvider', () => {
       expect(results.get('dora.changeFailureRate')).toBe(50); // 1 failed pair out of 2 pairs
     });
 
-    it('should return 0 when there are fewer than two deployments', async () => {
+    it('should throw when fewer than 2 successful production deployments are found', async () => {
       jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
-        deployments: [
-          {
-            id: '100',
-            commitSha: 'sha-1',
-            environment: 'production',
-            createdAt: '2026-06-10T00:00:00.000Z',
-            result: 'success',
-          },
-        ],
+        deployments: [],
       });
 
-      const results = await provider.calculateMetrics(mockEntity);
-
-      expect(results.get('dora.changeFailureRate')).toBe(0);
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /need at least 2 successful production deployments/,
+      );
+      expect(incidentsCollector.collect).not.toHaveBeenCalled();
     });
 
-    it('should return 0 when there are fewer than two successful deployments', async () => {
+    it('should throw when fewer than 2 successful deployments are found', async () => {
       jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
         deployments: [
           {
@@ -280,12 +273,12 @@ describe('DoraChangeFailureRateProvider', () => {
         ],
       });
 
-      const results = await provider.calculateMetrics(mockEntity);
-
-      expect(results.get('dora.changeFailureRate')).toBe(0);
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /need at least 2 successful production deployments.*found 1/,
+      );
     });
 
-    it('should return 0 when there are fewer than two production deployments', async () => {
+    it('should throw when fewer than two production deployments are found', async () => {
       jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
         deployments: [
           {
@@ -305,9 +298,53 @@ describe('DoraChangeFailureRateProvider', () => {
         ],
       });
 
-      const results = await provider.calculateMetrics(mockEntity);
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /need at least 2 successful production deployments.*found 1/,
+      );
+    });
 
-      expect(results.get('dora.changeFailureRate')).toBe(0);
+    it('should use configured productionEnvironments when filtering deployments', async () => {
+      const customProvider = DoraChangeFailureRateProvider.fromConfig(
+        new ConfigReader({
+          scorecard: {
+            plugins: {
+              dora: {
+                changeFailureRate: {
+                  options: {
+                    productionEnvironments: ['prod'],
+                  },
+                },
+              },
+            },
+          },
+        }),
+        {
+          collectorsService,
+        },
+      );
+
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '400',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '401',
+            commitSha: 'sha-2',
+            environment: 'prod',
+            createdAt: '2026-06-11T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
+
+      await expect(customProvider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /need at least 2 successful production deployments.*found 1/,
+      );
     });
   });
 });

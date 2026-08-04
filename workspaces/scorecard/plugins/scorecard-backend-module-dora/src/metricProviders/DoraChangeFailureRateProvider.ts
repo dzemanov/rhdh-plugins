@@ -115,6 +115,20 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       },
     });
 
+    const successfulProductionDeployments =
+      deploymentsCollected.deployments.filter(deployment =>
+        isSuccessfulProductionDeployment(
+          deployment,
+          this.config.productionEnvironments,
+        ),
+      );
+
+    if (successfulProductionDeployments.length < 2) {
+      throw new Error(
+        `Unable to calculate change failure rate: need at least 2 successful production deployments in the last ${DORA_TIME_WINDOW_DAYS} days, found ${successfulProductionDeployments.length}`,
+      );
+    }
+
     const incidentsCollected = await this.collectorsService.collect<
       typeof incidentsCollectorInputSchema,
       typeof incidentsCollectorOutputSchema
@@ -131,19 +145,6 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
         to: to.toISOString(),
       },
     });
-
-    const successfulProductionDeployments =
-      deploymentsCollected.deployments.filter(deployment =>
-        isSuccessfulProductionDeployment(
-          deployment,
-          this.config.productionEnvironments,
-        ),
-      );
-
-    if (successfulProductionDeployments.length < 2) {
-      results.set(this.getProviderId(), 0);
-      return results;
-    }
 
     let deploymentsWithIncidents = 0;
     let evaluatedDeployments = 0;
@@ -176,6 +177,8 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       }
     }
 
+    // All deployment pairs shared the same createdAt, so no time window existed for an incident to fall between them.
+    // Guard against dividing by zero.
     if (evaluatedDeployments === 0) {
       results.set(this.getProviderId(), 0);
       return results;

@@ -78,6 +78,7 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
         type: 'number',
         thresholds: DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS,
         history: true,
+        defaultVisualization: 'graph',
       },
     ];
   }

@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+import type { LoggerService } from '@backstage/backend-plugin-api';
 import type { Config } from '@backstage/config';
-import type { Entity } from '@backstage/catalog-model';
+import { stringifyEntityRef, type Entity } from '@backstage/catalog-model';
 import { Metric } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import {
   type ScorecardCollectorsService,
@@ -37,26 +38,31 @@ import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 type DoraMeanTimeToRestoreProviderOptions = {
   collectorsService: ScorecardCollectorsService;
   config: DoraMeanTimeToRestoreConfig;
+  logger: LoggerService;
 };
 
 export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
   private readonly collectorsService: ScorecardCollectorsService;
   private readonly config: DoraMeanTimeToRestoreConfig;
+  private readonly logger: LoggerService;
 
   private constructor(options: DoraMeanTimeToRestoreProviderOptions) {
     this.collectorsService = options.collectorsService;
     this.config = options.config;
+    this.logger = options.logger;
   }
 
   static fromConfig(
     config: Config,
     options: {
       collectorsService: ScorecardCollectorsService;
+      logger: LoggerService;
     },
   ): DoraMeanTimeToRestoreProvider {
     return new DoraMeanTimeToRestoreProvider({
       collectorsService: options.collectorsService,
       config: parseDoraMeanTimeToRestoreConfig(config),
+      logger: options.logger,
     });
   }
 
@@ -112,6 +118,7 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
     });
 
     const recoveryHours: number[] = [];
+    let invalidResolvedIncidents = 0;
     for (const incident of incidentsCollected.incidents) {
       if (!incident.resolutionAt) {
         continue;
@@ -119,6 +126,14 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
       const createdAtTimestamp = new Date(incident.createdAt).getTime();
       const resolutionAtTimestamp = new Date(incident.resolutionAt).getTime();
       if (resolutionAtTimestamp < createdAtTimestamp) {
+        invalidResolvedIncidents += 1;
+        this.logger.warn(
+          `Skipping incident ${incident.id} for ${stringifyEntityRef(
+            entity,
+          )} while calculating ${this.getProviderId()}: resolutionAt (${
+            incident.resolutionAt
+          }) is before createdAt (${incident.createdAt})`,
+        );
         continue;
       }
       recoveryHours.push(
@@ -127,6 +142,12 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
     }
 
     if (recoveryHours.length === 0) {
+      if (invalidResolvedIncidents > 0) {
+        throw new Error(
+          `Unable to calculate mean time to restore: found ${invalidResolvedIncidents} resolved incident(s) with resolutionAt before createdAt and no measurable recovery times`,
+        );
+      }
+      // No incidents, or only unresolved incidents
       results.set(this.getProviderId(), 0);
       return results;
     }

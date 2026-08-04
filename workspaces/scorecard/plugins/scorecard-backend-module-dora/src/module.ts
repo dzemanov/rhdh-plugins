@@ -48,6 +48,7 @@ export const scorecardModuleDora = createBackendModule({
           }),
           DoraMeanTimeToRestoreProvider.fromConfig(config, {
             collectorsService,
+            logger,
           }),
           DoraChangeFailureRateProvider.fromConfig(config, {
             collectorsService,

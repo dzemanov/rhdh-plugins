@@ -13,8 +13,11 @@ Deployments are processed as chronological pairs (`deployment` -> `nextDeploymen
 `[deployment.createdAt, nextDeployment.createdAt)`.
 
 For each interval, if at least one incident has `createdAt` in that interval, the deployment is treated as failed.
-The result is:
-`(deploymentsWithIncidents / evaluatedDeployments) * 100`.
+The result is: `(deploymentsWithIncidents / evaluatedDeployments) * 100`.
+
+The metric is **deployment-interval based**, not incident-window based: only incidents that fall between two successful production deployments are scored. An incident after the latest successful production deployment in the 30-day window is not counted in that run, even if it was created within the DORA 30-day window. It is attributed in a later DORA calculation to the interval closed by the next successful production deployment (the first deployment that follows).
+
+If fewer than two successful production deployments exist in the window, or there are no evaluable intervals (adjacent deployments share the same `createdAt`), calculation fails with an error.
 
 ## Scope and limitation
 

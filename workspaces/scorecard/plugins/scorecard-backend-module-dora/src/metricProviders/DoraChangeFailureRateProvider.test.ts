@@ -346,5 +346,88 @@ describe('DoraChangeFailureRateProvider', () => {
         /need at least 2 successful production deployments.*found 1/,
       );
     });
+
+    it('should return 0 when evaluated intervals have no incidents', async () => {
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [],
+      });
+
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('dora.changeFailureRate')).toBe(0);
+    });
+
+    it('should attribute an incident after last successful production deployment to the following DORA interval', async () => {
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '101',
+            commitSha: 'sha-2',
+            environment: 'production',
+            createdAt: '2026-06-11T10:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '102',
+            commitSha: 'sha-3',
+            environment: 'production',
+            createdAt: '2026-06-12T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [
+          {
+            id: 'INC-1',
+            // Belongs to [sha-2, sha-3]
+            createdAt: '2026-06-11T00:00:00.000Z',
+            resolutionAt: null,
+          },
+          {
+            id: 'INC-2',
+            // After last successful deployment sha-3, not counted
+            createdAt: '2026-06-13T00:00:00.000Z',
+            resolutionAt: null,
+          },
+        ],
+      });
+
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('dora.changeFailureRate')).toBe(50); // 1 of 2 intervals
+    });
+
+    it('should throw when all adjacent successful production deployments share createdAt', async () => {
+      jest.mocked(deploymentsCollector.collect).mockResolvedValueOnce({
+        deployments: [
+          {
+            id: '100',
+            commitSha: 'sha-1',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+          {
+            id: '101',
+            commitSha: 'sha-2',
+            environment: 'production',
+            createdAt: '2026-06-10T00:00:00.000Z',
+            result: 'success',
+          },
+        ],
+      });
+
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /no evaluable deployment intervals/,
+      );
+    });
   });
 });

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { mockServices } from '@backstage/backend-test-utils';
 import { ConfigReader } from '@backstage/config';
 import { DoraMeanTimeToRestoreProvider } from './DoraMeanTimeToRestoreProvider';
 import {
@@ -24,6 +25,8 @@ import {
 import { DORA_DEFAULT_INCIDENTS_COLLECTOR_ID } from '../constants';
 import { DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS } from './DoraConfig';
 
+const mockLogger = mockServices.logger.mock();
+
 describe('DoraMeanTimeToRestoreProvider', () => {
   let incidentsCollector: ReturnType<typeof buildMockIncidentsCollector>;
   let collectorsService: ReturnType<
@@ -33,6 +36,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
   let provider: DoraMeanTimeToRestoreProvider;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     incidentsCollector = buildMockIncidentsCollector({
       incidents: [
         {
@@ -48,6 +52,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
     }));
     provider = DoraMeanTimeToRestoreProvider.fromConfig(new ConfigReader({}), {
       collectorsService,
+      logger: mockLogger,
     });
   });
 
@@ -117,6 +122,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
         }),
         {
           collectorsService: customCollectorsService,
+          logger: mockLogger,
         },
       );
 
@@ -174,6 +180,59 @@ describe('DoraMeanTimeToRestoreProvider', () => {
       const results = await provider.calculateMetrics(mockEntity);
 
       expect(results.get('dora.meanTimeToRestore')).toBe(0);
+    });
+
+    it('should return 0 when no incidents are found', async () => {
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [],
+      });
+
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('dora.meanTimeToRestore')).toBe(0);
+    });
+
+    it('should throw when resolved incidents are invalid and none are measurable', async () => {
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [
+          {
+            id: 'INC-1',
+            createdAt: '2026-06-10T12:00:00.000Z',
+            resolutionAt: '2026-06-10T10:00:00.000Z',
+          },
+        ],
+      });
+
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        /resolutionAt before createdAt and no measurable recovery times/,
+      );
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping incident INC-1'),
+      );
+    });
+
+    it('should skip invalid resolved incidents and calculate mean from the rest', async () => {
+      jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
+        incidents: [
+          {
+            id: 'INC-1',
+            createdAt: '2026-06-10T12:00:00.000Z',
+            resolutionAt: '2026-06-10T10:00:00.000Z',
+          },
+          {
+            id: 'INC-2',
+            createdAt: '2026-06-11T10:00:00.000Z',
+            resolutionAt: '2026-06-11T12:00:00.000Z', // 2h
+          },
+        ],
+      });
+
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('dora.meanTimeToRestore')).toBe(2);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping incident INC-1'),
+      );
     });
   });
 });

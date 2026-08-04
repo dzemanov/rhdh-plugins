@@ -177,11 +177,10 @@ export class DoraChangeFailureRateProvider implements MetricProvider<'number'> {
       }
     }
 
-    // All deployment pairs shared the same createdAt, so no time window existed for an incident to fall between them.
-    // Guard against dividing by zero.
     if (evaluatedDeployments === 0) {
-      results.set(this.getProviderId(), 0);
-      return results;
+      throw new Error(
+        'Unable to calculate change failure rate: no evaluable deployment intervals were found (adjacent successful production deployments must have distinct createdAt timestamps)',
+      );
     }
 
     results.set(

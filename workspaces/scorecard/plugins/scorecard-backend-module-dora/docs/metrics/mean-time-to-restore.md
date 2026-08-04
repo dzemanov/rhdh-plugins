@@ -7,8 +7,13 @@
 
 Mean Time to Restore measures how quickly is service restored after incidents occur.
 
-The metric computes mean incident recovery time from `createdAt` to `resolutionAt` for incidents in the last 30 days.
-Only resolved incidents are considered.
+The metric computes mean incident recovery time for incidents in the last 30 days.
+Only resolved incidents are considered (`resolutionAt` is not `null`).
+For each resolved incident, recovery time is `resolutionAt - createdAt` in hours.
+The result is: `mean(recoveryHours)`.
+
+If there are no incidents, or only unresolved ones, the metric is `0`.
+If resolved incidents exist but none have a measurable recovery time (for example `resolutionAt` before `createdAt`), calculation fails with an error.
 
 ## Default thresholds
 

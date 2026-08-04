@@ -69,6 +69,8 @@ export class MyMetricProvider implements MetricProvider<'number'> {
       title: 'Example Metric',
       type: this.getMetricType(),
       history: true,
+      // Optional. Omit / undefined => 'value'. Use 'graph' when a time-series UI is intended.
+      defaultVisualization: 'graph',
     };
   }
 

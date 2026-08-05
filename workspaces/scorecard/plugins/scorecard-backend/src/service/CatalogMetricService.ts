@@ -239,7 +239,8 @@ export class CatalogMetricService {
       }
       const dayKey = new Date(row.timestamp).toISOString().slice(0, 10);
       const existing = latestByUtcDay.get(dayKey);
-      if (!existing || row.id > existing.id) {
+      // Postgres may return bigIncrements as strings; compare numerically.
+      if (!existing || Number(row.id) > Number(existing.id)) {
         latestByUtcDay.set(dayKey, row);
       }
     }

@@ -295,7 +295,8 @@ describe('DatabaseMetricValues', () => {
         expect(result).toHaveLength(2);
         expect(result[0].value).toBe(8);
         expect(result[1].value).toBe(9);
-        expect(result[1].id).toBeGreaterThan(result[0].id);
+        // Postgres returns bigIncrements as strings; SQLite returns numbers
+        expect(Number(result[1].id)).toBeGreaterThan(Number(result[0].id));
       },
     );
 

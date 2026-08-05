@@ -15,6 +15,8 @@
  */
 
 import type { Config } from '@backstage/config';
+import type { JsonObject } from '@backstage/types';
+import { z } from 'zod';
 import { JiraClient } from './base';
 import { ScorecardJiraAnnotations } from '../annotations';
 import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
@@ -22,6 +24,8 @@ import {
   newEntityComponent,
   newMockRootConfig,
 } from '../../__fixtures__/testUtils';
+import type { JiraIssue, Method } from './types';
+import { Entity } from '@backstage/catalog-model';
 
 const {
   PROJECT_KEY,
@@ -37,10 +41,6 @@ class TestJiraClient extends JiraClient {
     return '/search';
   }
 
-  getSearchEndpoint(): string {
-    return '/search';
-  }
-
   buildSearchBody(jql: string): string {
     return JSON.stringify({ jql });
   }
@@ -51,6 +51,23 @@ class TestJiraClient extends JiraClient {
 
   getApiVersion(): number {
     return 3;
+  }
+
+  public getIncidentIssues(
+    _entity: Entity,
+    _options: { from: string; to: string },
+  ): Promise<JiraIssue[]> {
+    throw new Error('Method not implemented.');
+  }
+
+  public sendPaginatedRequest<TPage, TOut>(_options: {
+    url: string;
+    method: Method;
+    body?: JsonObject;
+    responseSchema: z.ZodType<TPage>;
+    mapper: (page: TPage) => TOut[];
+  }): Promise<TOut[]> {
+    throw new Error('Method not implemented.');
   }
 }
 
@@ -321,6 +338,47 @@ describe('JiraClient', () => {
     });
   });
 
+  describe('buildIncidentJql', () => {
+    const options = {
+      from: '2026-06-01T00:00:00.000Z',
+      to: '2026-06-30T23:59:59.999Z',
+    };
+
+    it('should build JQL using incident project key and date bounds', () => {
+      const entity = newEntityComponent({
+        [INCIDENT_PROJECT_KEY]: 'INC',
+        [PROJECT_KEY]: 'PROJ',
+      });
+
+      const jql = (testJiraClient as any).buildIncidentJql(entity, options);
+
+      expect(jql).toBe(
+        'project = "INC" AND type = Incident AND created >= "2026-06-01 00:00" AND created <= "2026-06-30 23:59"',
+      );
+    });
+
+    it('should fall back to project key when incident project key is missing', () => {
+      const entity = newEntityComponent({
+        [PROJECT_KEY]: 'PROJ',
+      });
+
+      const jql = (testJiraClient as any).buildIncidentJql(entity, options);
+
+      expect(jql).toContain('project = "PROJ"');
+      expect(jql).toContain('type = Incident');
+    });
+
+    it('should throw when neither incident nor project key annotation is present', () => {
+      const entity = newEntityComponent();
+
+      expect(() =>
+        (testJiraClient as any).buildIncidentJql(entity, options),
+      ).toThrow(
+        `Missing required '${INCIDENT_PROJECT_KEY}' or '${PROJECT_KEY}' annotation for entity 'mock-entity'`,
+      );
+    });
+  });
+
   describe('buildJqlFilters', () => {
     it('should use provided mandatory filter when mandatory filter is provided in options', () => {
       const filters = { project: 'project = "MOON"' };
@@ -414,63 +472,6 @@ describe('JiraClient', () => {
         mockEntity,
       );
       expect(count).toEqual(10);
-    });
-  });
-
-  describe('getIncidentIssues', () => {
-    it('should return mapped Jira issues', async () => {
-      const mockEntity = newEntityComponent({
-        [PROJECT_KEY]: 'PROJ',
-        [INCIDENT_PROJECT_KEY]: 'INC',
-      });
-      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: jest.fn().mockResolvedValueOnce({
-          issues: [
-            {
-              id: '10001',
-              fields: {
-                created: '2026-06-01T10:00:00.000+0530',
-                resolutiondate: '2026-06-01T12:00:00.000+0530',
-              },
-            },
-            {
-              id: '10002',
-              fields: {
-                created: '2026-06-02T10:00:00.000+0530',
-                resolutiondate: null,
-              },
-            },
-          ],
-        }),
-      });
-
-      const issues = await (testJiraClient as any).getIncidentIssues(
-        mockEntity,
-        {
-          from: '2026-06-01T00:00:00.000Z',
-          to: '2026-06-30T23:59:59.999Z',
-        },
-      );
-      const requestOptions = (globalThis.fetch as jest.Mock).mock.calls[0][1];
-      const requestBody = JSON.parse(requestOptions.body);
-
-      expect(issues).toEqual([
-        {
-          id: '10001',
-          createdAt: '2026-06-01T04:30:00.000Z',
-          resolutionAt: '2026-06-01T06:30:00.000Z',
-        },
-        {
-          id: '10002',
-          createdAt: '2026-06-02T04:30:00.000Z',
-          resolutionAt: null,
-        },
-      ]);
-      expect(requestBody.jql).toContain('project = "INC"');
-      expect(requestBody.jql).toContain('type = Incident');
-      expect(requestBody.jql).toContain('created >= "2026-06-01 00:00"');
-      expect(requestBody.jql).toContain('created <= "2026-06-30 23:59"');
     });
   });
 });

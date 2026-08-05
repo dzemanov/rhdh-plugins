@@ -14,13 +14,68 @@
  * limitations under the License.
  */
 
+import type { Entity } from '@backstage/catalog-model';
+import type { JsonObject } from '@backstage/types';
+import { z } from 'zod';
 import { JiraClient } from '../clients/base';
+import { mapJiraIssues } from '../clients/mappers';
+import { jiraSearchIssueSchema } from '../clients/schemas/jiraSearchIssue';
+import type { JiraIssue, Method } from '../clients/types';
 import { DATA_CENTER_API_VERSION } from '../constants';
 
 export class JiraDataCenterClientStrategy extends JiraClient {
-  protected getSearchEndpoint(): string {
-    return '/search';
+  public async sendPaginatedRequest<TPage, TOut>(options: {
+    url: string;
+    method: Method;
+    body?: JsonObject;
+    responseSchema: z.ZodType<TPage>;
+    mapper: (page: TPage) => TOut[];
+  }): Promise<TOut[]> {
+    const results: TOut[] = [];
+    let startAt = 0;
+    let hasMorePages = true;
+    const headers = await this.getAuthHeaders();
+
+    const dataCenterPagingSchema = z.object({
+      startAt: z.number(),
+      maxResults: z.number(),
+      total: z.number(),
+    });
+
+    while (hasMorePages) {
+      const requestBody: JsonObject = {
+        ...options.body,
+        startAt,
+      };
+
+      const data = await this.sendRequest({
+        method: options.method,
+        url: options.url,
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      let page: TPage;
+      let paging: z.infer<typeof dataCenterPagingSchema>;
+      try {
+        page = options.responseSchema.parse(data);
+        paging = dataCenterPagingSchema.parse(data);
+      } catch (error) {
+        throw new Error(
+          `Incorrect response data from ${options.url}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+      results.push(...options.mapper(page));
+
+      startAt = paging.startAt + paging.maxResults;
+      hasMorePages = paging.maxResults > 0 && startAt < paging.total;
+    }
+
+    return results;
   }
+
   protected getSearchCountEndpoint(): string {
     return '/search';
   }
@@ -44,5 +99,27 @@ export class JiraDataCenterClientStrategy extends JiraClient {
 
   protected getApiVersion(): number {
     return DATA_CENTER_API_VERSION;
+  }
+
+  public async getIncidentIssues(
+    entity: Entity,
+    options: {
+      from: string;
+      to: string;
+    },
+  ): Promise<JiraIssue[]> {
+    const baseUrl = await this.getBaseUrl();
+    return this.sendPaginatedRequest({
+      url: `${baseUrl}/search`,
+      method: 'POST',
+      body: {
+        jql: this.buildIncidentJql(entity, options),
+        fields: ['created', 'resolutiondate'],
+      },
+      responseSchema: z.object({
+        issues: z.array(jiraSearchIssueSchema),
+      }),
+      mapper: page => mapJiraIssues(page.issues),
+    });
   }
 }

@@ -15,6 +15,7 @@
  */
 
 import type { Entity } from '@backstage/catalog-model';
+import { z } from 'zod';
 import { ScorecardJiraAnnotations } from '../annotations';
 import { JiraDataCenterClientStrategy } from './JiraDataCenterClientStrategy';
 import {
@@ -24,7 +25,7 @@ import {
 
 globalThis.fetch = jest.fn();
 
-const { PROJECT_KEY } = ScorecardJiraAnnotations;
+const { PROJECT_KEY, INCIDENT_PROJECT_KEY } = ScorecardJiraAnnotations;
 
 const mockConnectionStrategy = {
   getBaseUrl: jest.fn().mockReturnValue('https://example.com/api/rest/api/2'),
@@ -53,19 +54,18 @@ describe('JiraDataCenterClient', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    mockConnectionStrategy.getBaseUrl.mockReturnValue(
+      'https://example.com/api/rest/api/2',
+    );
+    mockConnectionStrategy.getAuthHeaders.mockResolvedValue({
+      Authorization: 'Bearer dummyToken',
+    });
   });
 
   describe('constructor', () => {
     it('should create JiraDataCenterClient successfully', () => {
       expect(jiraDataCenterClient).toBeInstanceOf(JiraDataCenterClientStrategy);
-    });
-  });
-
-  describe('getSearchEndpoint', () => {
-    it('should return correct search endpoint', () => {
-      const searchEndpoint = (jiraDataCenterClient as any).getSearchEndpoint();
-      expect(searchEndpoint).toEqual('/search');
     });
   });
 
@@ -103,12 +103,12 @@ describe('JiraDataCenterClient', () => {
       [PROJECT_KEY]: 'DATACENTER',
     });
 
-    (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: jest.fn().mockResolvedValueOnce({ total: 10 }),
-    });
-
     it('should get count of open issues', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({ total: 10 }),
+      });
+
       const count = await jiraDataCenterClient.getCountOpenIssues(mockEntity);
       expect(count).toBe(10);
     });
@@ -118,6 +118,174 @@ describe('JiraDataCenterClient', () => {
     it('should return Jira Data Center api version', () => {
       const apiVersion = (jiraDataCenterClient as any).getApiVersion();
       expect(apiVersion).toEqual(2);
+    });
+  });
+
+  describe('sendPaginatedRequest', () => {
+    const responseSchema = z.object({
+      items: z.array(z.object({ id: z.string() })),
+    });
+
+    it('should return mapped results from a single page', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({
+          startAt: 0,
+          maxResults: 50,
+          total: 2,
+          items: [{ id: 'a' }, { id: 'b' }],
+        }),
+      });
+
+      const results = await jiraDataCenterClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/2/search',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+      });
+
+      expect(results).toEqual(['a', 'b']);
+      expect(
+        JSON.parse((globalThis.fetch as jest.Mock).mock.calls[0][1].body),
+      ).toEqual({ jql: 'project = "INC"', startAt: 0 });
+    });
+
+    it('should page with startAt and flatten mapped results', async () => {
+      (globalThis.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            startAt: 0,
+            maxResults: 1,
+            total: 2,
+            items: [{ id: 'a' }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            startAt: 1,
+            maxResults: 1,
+            total: 2,
+            items: [{ id: 'b' }],
+          }),
+        });
+
+      const results = await jiraDataCenterClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/2/search',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+      });
+
+      expect(results).toEqual(['a', 'b']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      expect(
+        JSON.parse((globalThis.fetch as jest.Mock).mock.calls[0][1].body)
+          .startAt,
+      ).toBe(0);
+      expect(
+        JSON.parse((globalThis.fetch as jest.Mock).mock.calls[1][1].body)
+          .startAt,
+      ).toBe(1);
+    });
+
+    it('should throw when paging fields are missing', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({
+          items: [{ id: 'a' }],
+        }),
+      });
+
+      await expect(
+        jiraDataCenterClient.sendPaginatedRequest({
+          url: 'https://example.com/api/rest/api/2/search',
+          method: 'POST',
+          responseSchema,
+          mapper: page => page.items.map(item => item.id),
+        }),
+      ).rejects.toThrow(
+        'Incorrect response data from https://example.com/api/rest/api/2/search',
+      );
+    });
+
+    it('should throw when response does not match schema', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({
+          startAt: 0,
+          maxResults: 50,
+          total: 1,
+          items: 'bad',
+        }),
+      });
+
+      await expect(
+        jiraDataCenterClient.sendPaginatedRequest({
+          url: 'https://example.com/api/rest/api/2/search',
+          method: 'POST',
+          responseSchema,
+          mapper: page => page.items.map(item => item.id),
+        }),
+      ).rejects.toThrow(
+        'Incorrect response data from https://example.com/api/rest/api/2/search',
+      );
+    });
+  });
+
+  describe('getIncidentIssues', () => {
+    const incidentOptions = {
+      from: '2026-06-01T00:00:00.000Z',
+      to: '2026-06-30T23:59:59.999Z',
+    };
+
+    it('should return mapped Jira issues from /search', async () => {
+      const mockEntity = newEntityComponent({
+        [PROJECT_KEY]: 'PROJ',
+        [INCIDENT_PROJECT_KEY]: 'INC',
+      });
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({
+          startAt: 0,
+          maxResults: 50,
+          total: 1,
+          issues: [
+            {
+              id: '10001',
+              fields: {
+                created: '2026-06-01T10:00:00.000+0530',
+                resolutiondate: '2026-06-01T12:00:00.000+0530',
+              },
+            },
+          ],
+        }),
+      });
+
+      const issues = await jiraDataCenterClient.getIncidentIssues(
+        mockEntity,
+        incidentOptions,
+      );
+      const requestUrl = (globalThis.fetch as jest.Mock).mock.calls[0][0];
+      const requestBody = JSON.parse(
+        (globalThis.fetch as jest.Mock).mock.calls[0][1].body,
+      );
+
+      expect(requestUrl).toBe('https://example.com/api/rest/api/2/search');
+      expect(issues).toEqual([
+        {
+          id: '10001',
+          createdAt: '2026-06-01T04:30:00.000Z',
+          resolutionAt: '2026-06-01T06:30:00.000Z',
+        },
+      ]);
+      expect(requestBody.jql).toContain('project = "INC"');
+      expect(requestBody.fields).toEqual(['created', 'resolutiondate']);
+      expect(requestBody).not.toHaveProperty('maxResults');
+      expect(requestBody.startAt).toBe(0);
     });
   });
 });

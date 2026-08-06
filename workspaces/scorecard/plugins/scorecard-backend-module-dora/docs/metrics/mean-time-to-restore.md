@@ -5,7 +5,7 @@
 - **Unit**: hours
 - **Computation window**: 30 days
 
-Mean Time to Restore measures how quickly is service restored after incidents occur.
+Mean Time to Restore measures how quickly service is restored after incidents occur.
 
 The metric computes mean incident recovery time for incidents in the last 30 days.
 Only resolved incidents are considered (`resolutionAt` is not `null`).

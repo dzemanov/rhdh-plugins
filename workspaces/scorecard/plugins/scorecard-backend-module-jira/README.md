@@ -84,6 +84,13 @@ Options define configuration that affect fetch jira issues global configuration,
 ```yaml
 # app-config.yaml
 scorecard:
+  # Scorecard-owned Jira datasource settings (auth stays under top-level jira:)
+  jira:
+    collectors:
+      incidents:
+        # Optional: Jira issue type for jira:incidents (default: Incident).
+        # Overridden by entity annotation jira/incident-issue-type when set.
+        issueType: Incident
   plugins:
     jira:
       openIssues:
@@ -212,8 +219,9 @@ Collectors in Scorecard are schema-validated at runtime. Any custom collector re
     - `jira/incident-label`
     - `jira/incident-team`
     - `jira/incident-custom-filter`
+    - `jira/incident-issue-type` (overrides app-config `issueType` when set)
 - **Behavior**
-  - Collects Jira issues with `type = Incident`
+  - Collects Jira issues matching the configured issue type (default `Incident`)
   - Does not apply the open-issues `mandatoryFilter` / global `customFilter` from app-config
   - Client-side fetch cap: at most **1000** incidents are collected per request. Pagination stops once the cap is reached
 
@@ -235,6 +243,7 @@ metadata:
     # jira/incident-label: sev-1
     # jira/incident-team: team-ops
     # jira/incident-custom-filter: priority = Highest
+    # jira/incident-issue-type: Production Incident
 spec:
   type: service
   lifecycle: production

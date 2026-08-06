@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
-export * from './jiraOpenIssues';
-export * from './jiraIncidents';
-export * from './pagination';
+export const INCIDENTS_CONFIG_PATH =
+  'scorecard.jira.collectors.incidents' as const;
+
+export const DEFAULT_INCIDENT_ISSUE_TYPE = 'Incident' as const;

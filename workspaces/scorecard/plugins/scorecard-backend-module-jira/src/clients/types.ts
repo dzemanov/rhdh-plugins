@@ -21,6 +21,11 @@ export interface JiraOptions {
   customFilter?: string;
 }
 
+/** Scorecard Jira incidents collector options */
+export interface JiraIncidentOptions {
+  issueType?: string;
+}
+
 export interface JiraEntityFilters {
   project: string;
   component?: string;

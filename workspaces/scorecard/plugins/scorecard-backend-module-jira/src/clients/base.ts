@@ -20,14 +20,21 @@ import type { JsonObject } from '@backstage/types';
 import type { z } from 'zod';
 import {
   JiraEntityFilters,
+  JiraIncidentOptions,
   JiraIssue,
   JiraOptions,
   Method,
   RequestOptions,
 } from './types';
-import { JIRA_MANDATORY_FILTER, OPEN_ISSUES_CONFIG_PATH } from '../constants';
+import {
+  DEFAULT_INCIDENT_ISSUE_TYPE,
+  INCIDENTS_CONFIG_PATH,
+  JIRA_MANDATORY_FILTER,
+  OPEN_ISSUES_CONFIG_PATH,
+} from '../constants';
 import {
   ScorecardJiraAnnotations,
+  ScorecardJiraIncidentAnnotations,
   incidentAnnotationFilters,
   openIssuesAnnotationFilters,
 } from '../annotations';
@@ -41,21 +48,32 @@ import {
 import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
 
 const { PROJECT_KEY } = ScorecardJiraAnnotations;
+const { INCIDENT_ISSUE_TYPE } = ScorecardJiraIncidentAnnotations;
 
 export abstract class JiraClient {
   protected readonly options?: JiraOptions;
+  protected readonly incidentOptions?: JiraIncidentOptions;
   protected readonly connectionStrategy: ConnectionStrategy;
 
   constructor(rootConfig: Config, connectionStrategy: ConnectionStrategy) {
     this.connectionStrategy = connectionStrategy;
 
-    const jiraOptions = rootConfig.getOptionalConfig(
+    const openIssuesOptions = rootConfig.getOptionalConfig(
       `${OPEN_ISSUES_CONFIG_PATH}.options`,
     );
-    if (jiraOptions) {
+    if (openIssuesOptions) {
       this.options = {
-        mandatoryFilter: jiraOptions.getOptionalString('mandatoryFilter'),
-        customFilter: jiraOptions.getOptionalString('customFilter'),
+        mandatoryFilter: openIssuesOptions.getOptionalString('mandatoryFilter'),
+        customFilter: openIssuesOptions.getOptionalString('customFilter'),
+      };
+    }
+
+    const incidentCollectorOptions = rootConfig.getOptionalConfig(
+      INCIDENTS_CONFIG_PATH,
+    );
+    if (incidentCollectorOptions) {
+      this.incidentOptions = {
+        issueType: incidentCollectorOptions.getOptionalString('issueType'),
       };
     }
   }
@@ -209,13 +227,29 @@ export abstract class JiraClient {
     );
     const from = toJiraDateTime(options.from);
     const to = toJiraDateTime(options.to);
+    const issueType = this.resolveIncidentIssueType(entity);
 
     return joinJqlClauses([
       ...Object.values(filters),
-      'type = Incident',
+      `type = "${issueType}"`,
       `created >= "${from}"`,
       `created <= "${to}"`,
     ]);
+  }
+
+  private resolveIncidentIssueType(entity: Entity): string {
+    const annotations = entity.metadata?.annotations || {};
+    const issueType =
+      annotations[INCIDENT_ISSUE_TYPE] ||
+      this.incidentOptions?.issueType ||
+      DEFAULT_INCIDENT_ISSUE_TYPE;
+
+    return validateJQLValue(
+      sanitizeValue(issueType),
+      annotations[INCIDENT_ISSUE_TYPE]
+        ? INCIDENT_ISSUE_TYPE
+        : 'incident issue type',
+    );
   }
 
   protected buildJqlFilters(filters: JiraEntityFilters): string {

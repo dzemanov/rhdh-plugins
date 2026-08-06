@@ -41,6 +41,7 @@ const {
   INCIDENT_LABEL,
   INCIDENT_TEAM,
   INCIDENT_CUSTOM_FILTER,
+  INCIDENT_ISSUE_TYPE,
 } = ScorecardJiraIncidentAnnotations;
 
 class TestJiraClient extends JiraClient {
@@ -444,7 +445,7 @@ describe('JiraClient', () => {
       );
 
       expect(jql).toBe(
-        '(project = "INC") AND (type = Incident) AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+        '(project = "INC") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
       );
     });
 
@@ -461,8 +462,68 @@ describe('JiraClient', () => {
       );
 
       expect(jql).toBe(
-        '(project = "INC") AND (component = "Payments") AND (labels = "sev-1") AND (type = Incident) AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+        '(project = "INC") AND (component = "Payments") AND (labels = "sev-1") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
       );
+    });
+
+    it('should use incident issue type from entity annotation', () => {
+      const entity = newEntityComponent({
+        [INCIDENT_PROJECT_KEY]: 'INC',
+        [INCIDENT_ISSUE_TYPE]: 'Production Incident',
+      });
+
+      const jql = (testJiraClient as any).buildIncidentJqlFilters(
+        entity,
+        options,
+      );
+
+      expect(jql).toContain('(type = "Production Incident")');
+    });
+
+    it('should use incident issue type from app-config when annotation is not set', () => {
+      const config = newMockRootConfig({
+        options: {
+          mandatoryFilter: 'type = Task AND resolution = Resolved',
+          customFilter: 'priority in ("Critical", "Blocker")',
+        },
+        incidentOptions: {
+          issueType: 'Service Incident',
+        },
+      });
+      testJiraClient = new TestJiraClient(config, mockConnectionStrategy);
+
+      const entity = newEntityComponent({
+        [INCIDENT_PROJECT_KEY]: 'INC',
+      });
+
+      const jql = (testJiraClient as any).buildIncidentJqlFilters(
+        entity,
+        options,
+      );
+
+      expect(jql).toContain('(type = "Service Incident")');
+    });
+
+    it('should prefer entity annotation issue type over app-config', () => {
+      const config = newMockRootConfig({
+        incidentOptions: {
+          issueType: 'Service Incident',
+        },
+      });
+      testJiraClient = new TestJiraClient(config, mockConnectionStrategy);
+
+      const entity = newEntityComponent({
+        [INCIDENT_PROJECT_KEY]: 'INC',
+        [INCIDENT_ISSUE_TYPE]: 'Production Incident',
+      });
+
+      const jql = (testJiraClient as any).buildIncidentJqlFilters(
+        entity,
+        options,
+      );
+
+      expect(jql).toContain('(type = "Production Incident")');
+      expect(jql).not.toContain('(type = "Service Incident")');
     });
 
     it('should fall back to project key when incident project key is missing', () => {
@@ -476,7 +537,7 @@ describe('JiraClient', () => {
       );
 
       expect(jql).toContain('(project = "PROJ")');
-      expect(jql).toContain('(type = Incident)');
+      expect(jql).toContain('(type = "Incident")');
     });
 
     it('should throw when neither incident nor project key annotation is present', () => {

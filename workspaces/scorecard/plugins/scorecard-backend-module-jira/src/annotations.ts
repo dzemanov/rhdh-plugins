@@ -25,7 +25,9 @@ export enum ScorecardJiraAnnotations {
 /**
  * Annotations used by the `jira:incidents` collector.
  * `INCIDENT_PROJECT_KEY` falls back to {@link ScorecardJiraAnnotations.PROJECT_KEY}.
- * Component, label, team, and custom-filter are incident-specific (no fallback).
+ * Component, label, team, custom-filter, and issue-type are incident-specific (no fallback).
+ * `INCIDENT_ISSUE_TYPE` overrides app-config `scorecard.jira.collectors.incidents.issueType`
+ * when set; otherwise the app-config value or default `Incident` is used.
  */
 export enum ScorecardJiraIncidentAnnotations {
   INCIDENT_PROJECT_KEY = 'jira/incident-project-key',
@@ -33,6 +35,7 @@ export enum ScorecardJiraIncidentAnnotations {
   INCIDENT_LABEL = 'jira/incident-label',
   INCIDENT_TEAM = 'jira/incident-team',
   INCIDENT_CUSTOM_FILTER = 'jira/incident-custom-filter',
+  INCIDENT_ISSUE_TYPE = 'jira/incident-issue-type',
 }
 
 export const openIssuesAnnotationFilters = {

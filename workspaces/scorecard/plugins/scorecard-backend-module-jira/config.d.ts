@@ -34,6 +34,22 @@ export interface Config {
   };
   /** Configuration for scorecard plugin */
   scorecard?: {
+    /**
+     * Scorecard-owned Jira datasource configuration (not connection/auth;
+     * auth stays under top-level `jira`).
+     */
+    jira?: {
+      collectors?: {
+        incidents?: {
+          /**
+           * Jira issue type used by the `jira:incidents` collector.
+           * Defaults to `Incident`. Overridden by entity annotation
+           * `jira/incident-issue-type` when set.
+           */
+          issueType?: string;
+        };
+      };
+    };
     /** Configuration for scorecard plugins/datasources */
     plugins?: {
       /** JIRA datasource configuration */

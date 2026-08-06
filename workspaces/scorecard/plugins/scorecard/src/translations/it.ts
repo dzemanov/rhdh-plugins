@@ -175,10 +175,13 @@ const scorecardTranslationIt = createTranslationMessages({
     'permissionRequired.description':
       "Per visualizzare il plugin Scorecard, contatta il tuo amministratore per concedere l'autorizzazione {{permission}}.",
     'permissionRequired.title': 'Autorizzazione mancante',
+    'thresholds.elite': 'Elite',
     'thresholds.entities_one': '{{count}} entità',
     'thresholds.entities_other': '{{count}} entità',
     'thresholds.error': 'Errore',
     'thresholds.exist': 'Esiste',
+    'thresholds.low': 'Basso',
+    'thresholds.medium': 'Medio',
     'thresholds.missing': 'Mancante',
     'thresholds.noEntities': 'Nessuna entità nello stato {{category}}',
     'thresholds.success': 'Successo',

@@ -219,6 +219,9 @@ export const scorecardTranslationRef: TranslationRef<
     readonly 'thresholds.success': string;
     readonly 'thresholds.warning': string;
     readonly 'thresholds.error': string;
+    readonly 'thresholds.elite': string;
+    readonly 'thresholds.medium': string;
+    readonly 'thresholds.low': string;
     readonly 'thresholds.exist': string;
     readonly 'thresholds.missing': string;
     readonly 'thresholds.noEntities': string;

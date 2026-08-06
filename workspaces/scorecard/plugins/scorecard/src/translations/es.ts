@@ -176,10 +176,13 @@ const scorecardTranslationEs = createTranslationMessages({
     'permissionRequired.description':
       'Para ver el complemento de tarjetas de puntuación, comuníquese con su administrador para que le otorgue el permiso {{permission}}.',
     'permissionRequired.title': 'Permiso faltante',
+    'thresholds.elite': 'Élite',
     'thresholds.entities_one': '{{count}} entidad',
     'thresholds.entities_other': '{{count}} entidades',
     'thresholds.error': 'Error',
     'thresholds.exist': 'Existente',
+    'thresholds.low': 'Bajo',
+    'thresholds.medium': 'Medio',
     'thresholds.missing': 'Faltante',
     'thresholds.noEntities': 'No hay entidades en el estado {{category}}',
     'thresholds.success': 'Éxito',

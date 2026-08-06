@@ -168,10 +168,13 @@ const scorecardTranslationJa = createTranslationMessages({
     'permissionRequired.description':
       'スコアカードプラグインを表示するには、管理者に連絡して {{permission}} 権限を付与してもらうよう依頼してください。',
     'permissionRequired.title': '権限がありません',
+    'thresholds.elite': 'エリート',
     'thresholds.entities_one': '{{count}} 個のエンティティー',
     'thresholds.entities_other': '{{count}} 個のエンティティー',
     'thresholds.error': 'エラー',
     'thresholds.exist': '存在する',
+    'thresholds.low': '低',
+    'thresholds.medium': '中',
     'thresholds.missing': 'なし',
     'thresholds.noEntities': '{{category}} 状態のエンティティーはありません',
     'thresholds.success': '成功',

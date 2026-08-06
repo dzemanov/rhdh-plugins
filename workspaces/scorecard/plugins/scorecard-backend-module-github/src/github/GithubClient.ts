@@ -129,7 +129,7 @@ export class GithubClient {
       query getDeployments($owner: String!, $repo: String!, $after: String) {
         repository(owner: $owner, name: $repo) {
           deployments(
-            first: 100
+            first: ${GITHUB_BATCH_SIZE}
             orderBy: { field: CREATED_AT, direction: DESC }
             after: $after
           ) {
@@ -338,7 +338,7 @@ export class GithubClient {
         repo: repository.repo,
         workflow_id: workflow.id,
         created: `${from.toISOString()}..${to.toISOString()}`,
-        per_page: 100,
+        per_page: GITHUB_BATCH_SIZE,
       },
       (response, done) => {
         const remaining = fetchItemsLimit - workflowRuns.length;

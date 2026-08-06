@@ -73,6 +73,7 @@ class TestJiraClient extends JiraClient {
     body?: JsonObject;
     responseSchema: z.ZodType<TPage>;
     mapper: (page: TPage) => TOut[];
+    fetchItemsLimit?: number;
   }): Promise<TOut[]> {
     throw new Error('Method not implemented.');
   }

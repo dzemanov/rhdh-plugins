@@ -196,6 +196,74 @@ describe('JiraDataCenterClient', () => {
       ).toBe(1);
     });
 
+    it('should stop paging when fetch limit is reached', async () => {
+      (globalThis.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            startAt: 0,
+            maxResults: 2,
+            total: 4,
+            items: [{ id: 'a' }, { id: 'b' }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            startAt: 2,
+            maxResults: 2,
+            total: 4,
+            items: [{ id: 'c' }, { id: 'd' }],
+          }),
+        });
+
+      const results = await jiraDataCenterClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/2/search',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+        fetchItemsLimit: 2,
+      });
+
+      expect(results).toEqual(['a', 'b']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should slice the last page when it exceeds remaining fetchItemsLimit', async () => {
+      (globalThis.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            startAt: 0,
+            maxResults: 2,
+            total: 5,
+            items: [{ id: 'a' }, { id: 'b' }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            startAt: 2,
+            maxResults: 3,
+            total: 5,
+            items: [{ id: 'c' }, { id: 'd' }],
+          }),
+        });
+
+      const results = await jiraDataCenterClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/2/search',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+        fetchItemsLimit: 3,
+      });
+
+      expect(results).toEqual(['a', 'b', 'c']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
+
     it('should throw when paging fields are missing', async () => {
       (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,

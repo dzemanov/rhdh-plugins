@@ -21,7 +21,10 @@ import { JiraClient } from '../clients/base';
 import { mapJiraIssues } from '../clients/mappers';
 import { jiraSearchIssueSchema } from '../clients/schemas/jiraSearchIssue';
 import type { JiraIssue, Method } from '../clients/types';
-import { DATA_CENTER_API_VERSION } from '../constants';
+import {
+  DATA_CENTER_API_VERSION,
+  DEFAULT_PAGINATED_FETCH_ITEMS_LIMIT,
+} from '../constants';
 
 export class JiraDataCenterClientStrategy extends JiraClient {
   public async sendPaginatedRequest<TPage, TOut>(options: {
@@ -30,7 +33,10 @@ export class JiraDataCenterClientStrategy extends JiraClient {
     body?: JsonObject;
     responseSchema: z.ZodType<TPage>;
     mapper: (page: TPage) => TOut[];
+    fetchItemsLimit?: number;
   }): Promise<TOut[]> {
+    const fetchItemsLimit =
+      options.fetchItemsLimit ?? DEFAULT_PAGINATED_FETCH_ITEMS_LIMIT;
     const results: TOut[] = [];
     let startAt = 0;
     let hasMorePages = true;
@@ -42,7 +48,7 @@ export class JiraDataCenterClientStrategy extends JiraClient {
       total: z.number(),
     });
 
-    while (hasMorePages) {
+    while (hasMorePages && results.length < fetchItemsLimit) {
       const requestBody: JsonObject = {
         ...options.body,
         startAt,
@@ -67,7 +73,15 @@ export class JiraDataCenterClientStrategy extends JiraClient {
           }`,
         );
       }
-      results.push(...options.mapper(page));
+
+      const remaining = fetchItemsLimit - results.length;
+      const mapped = options.mapper(page);
+      if (mapped.length >= remaining) {
+        results.push(...mapped.slice(0, remaining));
+        break;
+      } else {
+        results.push(...mapped);
+      }
 
       startAt = paging.startAt + paging.maxResults;
       hasMorePages = paging.maxResults > 0 && startAt < paging.total;

@@ -114,6 +114,11 @@ export abstract class JiraClient {
     body?: JsonObject;
     responseSchema: z.ZodType<TPage>;
     mapper: (page: TPage) => TOut[];
+    /**
+     * Client-side cap on total mapped items across all pages.
+     * Defaults to 1000.
+     */
+    fetchItemsLimit?: number;
   }): Promise<TOut[]>;
 
   private getAnnotationFiltersFromEntity(

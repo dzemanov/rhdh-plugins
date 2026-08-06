@@ -187,6 +187,66 @@ describe('JiraCloudClient', () => {
       ).toBe('token-2');
     });
 
+    it('should stop paging when fetch limit is reached', async () => {
+      (globalThis.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            items: [{ id: 'a' }, { id: 'b' }],
+            nextPageToken: 'token-2',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            items: [{ id: 'c' }],
+            isLast: true,
+          }),
+        });
+
+      const results = await jiraCloudClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/3/search/jql',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+        fetchItemsLimit: 2,
+      });
+
+      expect(results).toEqual(['a', 'b']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should slice the last page when it exceeds remaining fetchItemsLimit', async () => {
+      (globalThis.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            items: [{ id: 'a' }, { id: 'b' }],
+            nextPageToken: 'token-2',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValueOnce({
+            items: [{ id: 'c' }, { id: 'd' }],
+            isLast: true,
+          }),
+        });
+
+      const results = await jiraCloudClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/3/search/jql',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+        fetchItemsLimit: 3,
+      });
+
+      expect(results).toEqual(['a', 'b', 'c']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    });
+
     it('should throw when response does not match schema', async () => {
       (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,

@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-export * from './jiraOpenIssues';
-export * from './pagination';
+/** Client-side cap on total items across paginated Jira fetches (not per-page maxResults). */
+export const DEFAULT_PAGINATED_FETCH_ITEMS_LIMIT = 1000;

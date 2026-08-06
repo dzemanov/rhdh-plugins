@@ -28,7 +28,10 @@ import {
   GithubDeploymentsQueryResponse,
   GithubCommitsPullRequestsQueryResponse,
 } from './types';
-import { GITHUB_BATCH_SIZE } from './constants';
+import {
+  DEFAULT_DEPLOYMENT_FETCH_ITEMS_LIMIT,
+  GITHUB_BATCH_SIZE,
+} from './constants';
 import { buildCommitsPullRequestsQuery } from './queries/buildCommitsPullRequestsQuery';
 import { mapCommitsPullRequests } from './mappers';
 
@@ -116,7 +119,10 @@ export class GithubClient {
     repository: GithubRepository,
     from: Date,
     to: Date,
+    options?: { fetchItemsLimit?: number },
   ): Promise<GithubDeployment[]> {
+    const fetchItemsLimit =
+      options?.fetchItemsLimit ?? DEFAULT_DEPLOYMENT_FETCH_ITEMS_LIMIT;
     const octokit = await this.getOctokitClient(url);
     const deployments: GithubDeployment[] = [];
     const query = `
@@ -150,7 +156,7 @@ export class GithubClient {
     let hasMorePages = true;
     let reachedOlderThanWindow = false;
 
-    while (hasMorePages) {
+    while (hasMorePages && deployments.length < fetchItemsLimit) {
       const response: GithubDeploymentsQueryResponse = await octokit(query, {
         owner: repository.owner,
         repo: repository.repo,
@@ -170,6 +176,10 @@ export class GithubClient {
       }
 
       for (const deployment of pageDeployments) {
+        if (deployments.length >= fetchItemsLimit) {
+          break;
+        }
+
         if (!deployment || !deployment.databaseId || !deployment.commitOid) {
           continue;
         }
@@ -195,6 +205,7 @@ export class GithubClient {
       }
 
       hasMorePages =
+        deployments.length < fetchItemsLimit &&
         !reachedOlderThanWindow &&
         Boolean(response.repository.deployments?.pageInfo.hasNextPage);
       after = response.repository.deployments?.pageInfo.endCursor ?? null;
@@ -290,7 +301,10 @@ export class GithubClient {
     workflowName: string,
     from: Date,
     to: Date,
+    options?: { fetchItemsLimit?: number },
   ): Promise<GithubWorkflowRun[]> {
+    const fetchItemsLimit =
+      options?.fetchItemsLimit ?? DEFAULT_DEPLOYMENT_FETCH_ITEMS_LIMIT;
     const octokit = await this.getOctokitRestClient(url);
 
     const workflows = await octokit.paginate(
@@ -316,7 +330,8 @@ export class GithubClient {
       );
     }
 
-    const workflowRuns = await octokit.paginate(
+    const workflowRuns: GithubWorkflowRun[] = [];
+    await octokit.paginate(
       octokit.actions.listWorkflowRuns,
       {
         owner: repository.owner,
@@ -325,14 +340,25 @@ export class GithubClient {
         created: `${from.toISOString()}..${to.toISOString()}`,
         per_page: 100,
       },
-      response =>
-        response.data.map(run => ({
+      (response, done) => {
+        const remaining = fetchItemsLimit - workflowRuns.length;
+        const pageRuns =
+          response.data.length > remaining
+            ? response.data.slice(0, remaining)
+            : response.data;
+        const mapped = pageRuns.map(run => ({
           id: run.id,
           sha: run.head_sha,
           createdAt: run.created_at,
           status: run.status ?? null,
           conclusion: run.conclusion ?? null,
-        })),
+        }));
+        workflowRuns.push(...mapped);
+        if (workflowRuns.length === fetchItemsLimit) {
+          done();
+        }
+        return mapped;
+      },
     );
 
     // GitHub returns DESC by createdAt

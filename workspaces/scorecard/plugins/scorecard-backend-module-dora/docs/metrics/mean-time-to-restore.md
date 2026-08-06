@@ -50,6 +50,13 @@ Required entity annotations for the default `jira:incidents` collector:
 - `jira/incident-project-key` (preferred), or
 - `jira/project-key` (fallback when `jira/incident-project-key` is not set)
 
+Optional incident-only filters:
+
+- `jira/incident-component`
+- `jira/incident-label`
+- `jira/incident-team`
+- `jira/incident-custom-filter`
+
 #### Incidents collector contract
 
 If you're implementing a custom _Incidents_ collector, it must adhere to the following contract:

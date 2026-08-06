@@ -206,9 +206,15 @@ Collectors in Scorecard are schema-validated at runtime. Any custom collector re
 - **Annotation requirements**
   - Uses `jira/incident-project-key` when present
   - Falls back to `jira/project-key` when `jira/incident-project-key` is not set
-  - Requires at least one of those annotations on the entity
+  - Requires at least one of those `project-key` annotations on the entity
+  - Optional incident-only filters (no fallback to open-issues annotations):
+    - `jira/incident-component`
+    - `jira/incident-label`
+    - `jira/incident-team`
+    - `jira/incident-custom-filter`
 - **Behavior**
   - Collects Jira issues with `type = Incident`
+  - Does not apply the open-issues `mandatoryFilter` / global `customFilter`
 
 Example entity annotations for `jira:incidents` collector:
 
@@ -221,8 +227,13 @@ metadata:
   annotations:
     # Jira project for incident collection:
     jira/incident-project-key: INCIDENTS
-    # Optional fallback when incident-project-key is not set:
+    # Optional fallback when jira/incident-project-key is not set:
     jira/project-key: PROJECT
+    # Optional incident-only filters:
+    # jira/incident-component: Payments
+    # jira/incident-label: sev-1
+    # jira/incident-team: team-ops
+    # jira/incident-custom-filter: priority = Highest
 spec:
   type: service
   lifecycle: production

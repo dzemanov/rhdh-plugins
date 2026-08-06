@@ -16,9 +16,37 @@
 
 export enum ScorecardJiraAnnotations {
   PROJECT_KEY = 'jira/project-key',
-  INCIDENT_PROJECT_KEY = 'jira/incident-project-key',
   COMPONENT = 'jira/component',
   LABEL = 'jira/label',
   TEAM = 'jira/team',
   CUSTOM_FILTER = 'jira/custom-filter',
 }
+
+/**
+ * Annotations used by the `jira:incidents` collector.
+ * `INCIDENT_PROJECT_KEY` falls back to {@link ScorecardJiraAnnotations.PROJECT_KEY}.
+ * Component, label, team, and custom-filter are incident-specific (no fallback).
+ */
+export enum ScorecardJiraIncidentAnnotations {
+  INCIDENT_PROJECT_KEY = 'jira/incident-project-key',
+  INCIDENT_COMPONENT = 'jira/incident-component',
+  INCIDENT_LABEL = 'jira/incident-label',
+  INCIDENT_TEAM = 'jira/incident-team',
+  INCIDENT_CUSTOM_FILTER = 'jira/incident-custom-filter',
+}
+
+export const openIssuesAnnotationFilters = {
+  project: ScorecardJiraAnnotations.PROJECT_KEY,
+  component: ScorecardJiraAnnotations.COMPONENT,
+  label: ScorecardJiraAnnotations.LABEL,
+  team: ScorecardJiraAnnotations.TEAM,
+  customFilter: ScorecardJiraAnnotations.CUSTOM_FILTER,
+} as const;
+
+export const incidentAnnotationFilters = {
+  project: ScorecardJiraIncidentAnnotations.INCIDENT_PROJECT_KEY,
+  component: ScorecardJiraIncidentAnnotations.INCIDENT_COMPONENT,
+  label: ScorecardJiraIncidentAnnotations.INCIDENT_LABEL,
+  team: ScorecardJiraIncidentAnnotations.INCIDENT_TEAM,
+  customFilter: ScorecardJiraIncidentAnnotations.INCIDENT_CUSTOM_FILTER,
+} as const;

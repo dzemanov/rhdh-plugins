@@ -116,7 +116,7 @@ export class JiraCloudClientStrategy extends JiraClient {
       url: `${baseUrl}/search/jql`,
       method: 'POST',
       body: {
-        jql: this.buildIncidentJql(entity, options),
+        jql: this.buildIncidentJqlFilters(entity, options),
         fields: ['created', 'resolutiondate'],
       },
       responseSchema: z.object({

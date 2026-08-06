@@ -16,7 +16,10 @@
 
 import type { Entity } from '@backstage/catalog-model';
 import { z } from 'zod';
-import { ScorecardJiraAnnotations } from '../annotations';
+import {
+  ScorecardJiraAnnotations,
+  ScorecardJiraIncidentAnnotations,
+} from '../annotations';
 import { JiraDataCenterClientStrategy } from './JiraDataCenterClientStrategy';
 import {
   newEntityComponent,
@@ -25,7 +28,8 @@ import {
 
 globalThis.fetch = jest.fn();
 
-const { PROJECT_KEY, INCIDENT_PROJECT_KEY } = ScorecardJiraAnnotations;
+const { PROJECT_KEY } = ScorecardJiraAnnotations;
+const { INCIDENT_PROJECT_KEY } = ScorecardJiraIncidentAnnotations;
 
 const mockConnectionStrategy = {
   getBaseUrl: jest.fn().mockReturnValue('https://example.com/api/rest/api/2'),

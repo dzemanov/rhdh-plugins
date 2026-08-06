@@ -36,6 +36,15 @@ export function sanitizeValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+export function joinJqlClauses(
+  clauses: Array<string | undefined | null>,
+): string {
+  return clauses
+    .filter((value): value is string => Boolean(value && value !== ''))
+    .map(value => `(${value})`)
+    .join(' AND ');
+}
+
 export function toJiraDateTime(value: string): string {
   const parsedDate = parseDateTime(value);
 

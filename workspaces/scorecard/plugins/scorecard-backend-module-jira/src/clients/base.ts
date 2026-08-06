@@ -20,15 +20,19 @@ import type { JsonObject } from '@backstage/types';
 import type { z } from 'zod';
 import {
   JiraEntityFilters,
-  JiraEntityIncidentFilters,
   JiraIssue,
   JiraOptions,
   Method,
   RequestOptions,
 } from './types';
 import { JIRA_MANDATORY_FILTER, OPEN_ISSUES_CONFIG_PATH } from '../constants';
-import { ScorecardJiraAnnotations } from '../annotations';
 import {
+  ScorecardJiraAnnotations,
+  incidentAnnotationFilters,
+  openIssuesAnnotationFilters,
+} from '../annotations';
+import {
+  joinJqlClauses,
   sanitizeValue,
   toJiraDateTime,
   validateIdentifier,
@@ -36,14 +40,7 @@ import {
 } from './utils';
 import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
 
-const {
-  PROJECT_KEY,
-  INCIDENT_PROJECT_KEY,
-  COMPONENT,
-  LABEL,
-  TEAM,
-  CUSTOM_FILTER,
-} = ScorecardJiraAnnotations;
+const { PROJECT_KEY } = ScorecardJiraAnnotations;
 
 export abstract class JiraClient {
   protected readonly options?: JiraOptions;
@@ -119,90 +116,101 @@ export abstract class JiraClient {
     mapper: (page: TPage) => TOut[];
   }): Promise<TOut[]>;
 
-  protected getFiltersFromEntity(entity: Entity): JiraEntityFilters {
+  private getAnnotationFiltersFromEntity(
+    entity: Entity,
+    keys: JiraEntityFilters,
+    options?: { projectFallback?: string },
+  ): JiraEntityFilters {
     const annotations = entity?.metadata?.annotations || {};
+    const projectValue =
+      annotations[keys.project] ??
+      (options?.projectFallback
+        ? annotations[options.projectFallback]
+        : undefined);
 
-    const projectKey = annotations[PROJECT_KEY];
-    if (!projectKey) {
+    if (!projectValue) {
+      const requiredKeys = options?.projectFallback
+        ? `'${keys.project}' or '${options.projectFallback}'`
+        : `'${keys.project}'`;
       throw new Error(
-        `Missing required '${PROJECT_KEY}' annotation for entity '${
+        `Missing required ${requiredKeys} annotation for entity '${
           entity.metadata?.name || 'unknown'
         }'`,
       );
     }
 
-    const sanitizedProjectKey = sanitizeValue(projectKey);
+    const projectAnnotationKey = annotations[keys.project]
+      ? keys.project
+      : options?.projectFallback ?? keys.project;
+
     const filters: JiraEntityFilters = {
       project: `project = "${validateJQLValue(
-        sanitizedProjectKey,
-        PROJECT_KEY,
+        sanitizeValue(projectValue),
+        projectAnnotationKey,
       )}"`,
     };
 
-    const component = annotations[COMPONENT];
-    if (component) {
-      const sanitizedComponent = sanitizeValue(component);
-      filters.component = `component = "${validateJQLValue(
-        sanitizedComponent,
-        COMPONENT,
-      )}"`;
+    if (keys.component) {
+      const component = annotations[keys.component];
+      if (component) {
+        filters.component = `component = "${validateJQLValue(
+          sanitizeValue(component),
+          keys.component,
+        )}"`;
+      }
     }
 
-    const label = annotations[LABEL];
-    if (label) {
-      const sanitizedLabel = sanitizeValue(label);
-      filters.label = `labels = "${validateJQLValue(sanitizedLabel, LABEL)}"`;
+    if (keys.label) {
+      const label = annotations[keys.label];
+      if (label) {
+        filters.label = `labels = "${validateJQLValue(
+          sanitizeValue(label),
+          keys.label,
+        )}"`;
+      }
     }
 
-    const team = annotations[TEAM];
-    if (team) {
-      const sanitizedTeam = sanitizeValue(team);
-      filters.team = `team = ${validateIdentifier(sanitizedTeam, TEAM)}`;
+    if (keys.team) {
+      const team = annotations[keys.team];
+      if (team) {
+        filters.team = `team = ${validateIdentifier(
+          sanitizeValue(team),
+          keys.team,
+        )}`;
+      }
     }
 
-    const customFilter = annotations[CUSTOM_FILTER];
-    if (customFilter) {
-      filters.customFilter = customFilter;
+    if (keys.customFilter) {
+      const customFilter = annotations[keys.customFilter];
+      if (customFilter) {
+        filters.customFilter = customFilter;
+      }
     }
 
     return filters;
   }
 
-  protected getIncidentFiltersFromEntity(
-    entity: Entity,
-  ): JiraEntityIncidentFilters {
-    const annotations = entity?.metadata?.annotations || {};
-    const incidentProjectKey =
-      annotations[INCIDENT_PROJECT_KEY] ?? annotations[PROJECT_KEY];
-
-    if (!incidentProjectKey) {
-      throw new Error(
-        `Missing required '${INCIDENT_PROJECT_KEY}' or '${PROJECT_KEY}' annotation for entity '${
-          entity.metadata?.name || 'unknown'
-        }'`,
-      );
-    }
-
-    const sanitizedIncidentProjectKey = sanitizeValue(incidentProjectKey);
-    return {
-      project: `project = "${validateJQLValue(
-        sanitizedIncidentProjectKey,
-        annotations[INCIDENT_PROJECT_KEY] ? INCIDENT_PROJECT_KEY : PROJECT_KEY,
-      )}"`,
-    };
-  }
-
-  protected buildIncidentJql(
+  protected buildIncidentJqlFilters(
     entity: Entity,
     options: {
       from: string;
       to: string;
     },
   ): string {
-    const filters = this.getIncidentFiltersFromEntity(entity);
+    const filters = this.getAnnotationFiltersFromEntity(
+      entity,
+      incidentAnnotationFilters,
+      { projectFallback: PROJECT_KEY },
+    );
     const from = toJiraDateTime(options.from);
     const to = toJiraDateTime(options.to);
-    return `${filters.project} AND type = Incident AND created >= "${from}" AND created <= "${to}"`;
+
+    return joinJqlClauses([
+      ...Object.values(filters),
+      'type = Incident',
+      `created >= "${from}"`,
+      `created <= "${to}"`,
+    ]);
   }
 
   protected buildJqlFilters(filters: JiraEntityFilters): string {
@@ -217,14 +225,11 @@ export abstract class JiraClient {
         ? optionsCustomFilter
         : null;
 
-    return Object.values({
-      ...filters,
+    return joinJqlClauses([
+      ...Object.values(filters),
       defaultFilterQuery,
       customFilterQuery,
-    })
-      .filter(value => value && value !== '')
-      .map(value => `(${value})`)
-      .join(' AND ');
+    ]);
   }
 
   protected async getBaseUrl(): Promise<string> {
@@ -240,7 +245,10 @@ export abstract class JiraClient {
     const baseUrl = await this.getBaseUrl();
     const countOpenIssuesUrl = `${baseUrl}${this.getSearchCountEndpoint()}`;
 
-    const filters = this.getFiltersFromEntity(entity);
+    const filters = this.getAnnotationFiltersFromEntity(
+      entity,
+      openIssuesAnnotationFilters,
+    );
     const jql = this.buildJqlFilters(filters);
     const headers = await this.getAuthHeaders();
 

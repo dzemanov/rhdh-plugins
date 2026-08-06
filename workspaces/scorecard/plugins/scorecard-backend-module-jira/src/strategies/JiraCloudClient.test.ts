@@ -17,13 +17,17 @@
 import type { Entity } from '@backstage/catalog-model';
 import { z } from 'zod';
 import { JiraCloudClientStrategy } from './JiraCloudClientStrategy';
-import { ScorecardJiraAnnotations } from '../annotations';
+import {
+  ScorecardJiraAnnotations,
+  ScorecardJiraIncidentAnnotations,
+} from '../annotations';
 import {
   newEntityComponent,
   newMockRootConfig,
 } from '../../__fixtures__/testUtils';
 
-const { PROJECT_KEY, INCIDENT_PROJECT_KEY } = ScorecardJiraAnnotations;
+const { PROJECT_KEY } = ScorecardJiraAnnotations;
+const { INCIDENT_PROJECT_KEY } = ScorecardJiraIncidentAnnotations;
 
 globalThis.fetch = jest.fn();
 

@@ -18,7 +18,12 @@ import type { Config } from '@backstage/config';
 import type { JsonObject } from '@backstage/types';
 import { z } from 'zod';
 import { JiraClient } from './base';
-import { ScorecardJiraAnnotations } from '../annotations';
+import {
+  ScorecardJiraAnnotations,
+  ScorecardJiraIncidentAnnotations,
+  incidentAnnotationFilters,
+  openIssuesAnnotationFilters,
+} from '../annotations';
 import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
 import {
   newEntityComponent,
@@ -27,14 +32,16 @@ import {
 import type { JiraIssue, Method } from './types';
 import { Entity } from '@backstage/catalog-model';
 
+const { PROJECT_KEY, COMPONENT, LABEL, TEAM, CUSTOM_FILTER } =
+  ScorecardJiraAnnotations;
+
 const {
-  PROJECT_KEY,
   INCIDENT_PROJECT_KEY,
-  COMPONENT,
-  LABEL,
-  TEAM,
-  CUSTOM_FILTER,
-} = ScorecardJiraAnnotations;
+  INCIDENT_COMPONENT,
+  INCIDENT_LABEL,
+  INCIDENT_TEAM,
+  INCIDENT_CUSTOM_FILTER,
+} = ScorecardJiraIncidentAnnotations;
 
 class TestJiraClient extends JiraClient {
   getSearchCountEndpoint(): string {
@@ -222,123 +229,203 @@ describe('JiraClient', () => {
     });
   });
 
-  describe('getFiltersFromEntity', () => {
-    it('should extract project filter correctly when entity has only "project key"', () => {
-      const entity = newEntityComponent({ [PROJECT_KEY]: 'TEST' });
-      const filters = (testJiraClient as any).getFiltersFromEntity(entity);
+  describe('getAnnotationFiltersFromEntity', () => {
+    const annotationFilterCases = [
+      {
+        name: 'open issues',
+        keys: openIssuesAnnotationFilters,
+        options: undefined,
+        missingProjectError: `Missing required '${PROJECT_KEY}' annotation for entity 'mock-entity'`,
+      },
+      {
+        name: 'incidents',
+        keys: incidentAnnotationFilters,
+        options: { projectFallback: PROJECT_KEY },
+        missingProjectError: `Missing required '${INCIDENT_PROJECT_KEY}' or '${PROJECT_KEY}' annotation for entity 'mock-entity'`,
+      },
+    ] as const;
 
-      expect(filters).toEqual({
-        project: 'project = "TEST"',
-      });
-    });
+    it.each(annotationFilterCases)(
+      '$name: should extract project filter correctly when entity has only "project key"',
+      ({ keys, options }) => {
+        const entity = newEntityComponent({ [keys.project]: 'TEST' });
+        const filters = (testJiraClient as any).getAnnotationFiltersFromEntity(
+          entity,
+          keys,
+          options,
+        );
 
-    it('should throw error for missing project key when entity is missing "project key"', () => {
-      const entity = newEntityComponent({});
+        expect(filters).toEqual({
+          project: 'project = "TEST"',
+        });
+      },
+    );
 
-      expect(() =>
-        (testJiraClient as any).getFiltersFromEntity(entity),
-      ).toThrow(
-        "Missing required 'jira/project-key' annotation for entity 'mock-entity'",
-      );
-    });
+    it.each(annotationFilterCases)(
+      '$name: should throw error for missing project key when entity is missing "project key"',
+      ({ keys, options, missingProjectError }) => {
+        const entity = newEntityComponent({});
 
-    it('should throw error for invalid "project key" when "project key" is invalid', () => {
-      const entity = newEntityComponent({ [PROJECT_KEY]: 'TEST$123' });
+        expect(() =>
+          (testJiraClient as any).getAnnotationFiltersFromEntity(
+            entity,
+            keys,
+            options,
+          ),
+        ).toThrow(missingProjectError);
+      },
+    );
 
-      expect(() =>
-        (testJiraClient as any).getFiltersFromEntity(entity),
-      ).toThrow(
-        'jira/project-key contains invalid characters. Only alphanumeric, hyphens, spaces, and underscores are allowed.',
-      );
-    });
+    it.each(annotationFilterCases)(
+      '$name: should throw error for invalid "project key" when "project key" is invalid',
+      ({ keys, options }) => {
+        const entity = newEntityComponent({ [keys.project]: 'TEST$123' });
 
-    it('should extract all filters correctly when entity has all expected annotations', () => {
+        expect(() =>
+          (testJiraClient as any).getAnnotationFiltersFromEntity(
+            entity,
+            keys,
+            options,
+          ),
+        ).toThrow(
+          `${keys.project} contains invalid characters. Only alphanumeric, hyphens, spaces, and underscores are allowed.`,
+        );
+      },
+    );
+
+    it.each(annotationFilterCases)(
+      '$name: should extract all filters correctly when entity has all expected annotations',
+      ({ keys, options }) => {
+        const entity = newEntityComponent({
+          [keys.project]: 'TEST',
+          [keys.component]: 'backend',
+          [keys.label]: 'critical',
+          [keys.team]: '4316',
+          [keys.customFilter]: 'priority = High',
+        });
+
+        const filters = (testJiraClient as any).getAnnotationFiltersFromEntity(
+          entity,
+          keys,
+          options,
+        );
+
+        expect(filters).toEqual({
+          project: 'project = "TEST"',
+          component: 'component = "backend"',
+          label: 'labels = "critical"',
+          team: 'team = 4316',
+          customFilter: 'priority = High',
+        });
+      },
+    );
+
+    it.each(annotationFilterCases)(
+      '$name: should throw error for invalid "component" when "component" is invalid',
+      ({ keys, options }) => {
+        const entity = newEntityComponent({
+          [keys.project]: 'TEST',
+          [keys.component]: 'backend$123',
+        });
+
+        expect(() =>
+          (testJiraClient as any).getAnnotationFiltersFromEntity(
+            entity,
+            keys,
+            options,
+          ),
+        ).toThrow(
+          `${keys.component} contains invalid characters. Only alphanumeric, hyphens, spaces, and underscores are allowed.`,
+        );
+      },
+    );
+
+    it.each(annotationFilterCases)(
+      '$name: should throw error for invalid "label" when "label" is invalid',
+      ({ keys, options }) => {
+        const entity = newEntityComponent({
+          [keys.project]: 'TEST',
+          [keys.label]: 'critical$123',
+        });
+
+        expect(() =>
+          (testJiraClient as any).getAnnotationFiltersFromEntity(
+            entity,
+            keys,
+            options,
+          ),
+        ).toThrow(
+          `${keys.label} contains invalid characters. Only alphanumeric, hyphens, spaces, and underscores are allowed.`,
+        );
+      },
+    );
+
+    it.each(annotationFilterCases)(
+      '$name: should throw error for invalid "team" when "team" is invalid',
+      ({ keys, options }) => {
+        const entity = newEntityComponent({
+          [keys.project]: 'TEST',
+          [keys.team]: 'team-alpha$123',
+        });
+
+        expect(() =>
+          (testJiraClient as any).getAnnotationFiltersFromEntity(
+            entity,
+            keys,
+            options,
+          ),
+        ).toThrow(
+          `${keys.team} contains invalid characters. Only alphanumeric, hyphens, and underscores are allowed.`,
+        );
+      },
+    );
+
+    it('incidents: should fall back to project key when incident project key is missing', () => {
       const entity = newEntityComponent({
-        [PROJECT_KEY]: 'TEST',
-        [COMPONENT]: 'backend',
-        [LABEL]: 'critical',
-        [TEAM]: '4316',
-        [CUSTOM_FILTER]: 'priority = High',
-      });
-
-      const filters = (testJiraClient as any).getFiltersFromEntity(entity);
-
-      expect(filters).toEqual({
-        project: 'project = "TEST"',
-        component: 'component = "backend"',
-        label: 'labels = "critical"',
-        team: 'team = 4316',
-        customFilter: 'priority = High',
-      });
-    });
-
-    it('should throw error for invalid "component" when "component" is invalid', () => {
-      const entity = newEntityComponent({
-        [PROJECT_KEY]: 'TEST',
-        [COMPONENT]: 'backend$123',
-      });
-
-      expect(() =>
-        (testJiraClient as any).getFiltersFromEntity(entity),
-      ).toThrow(
-        'jira/component contains invalid characters. Only alphanumeric, hyphens, spaces, and underscores are allowed.',
-      );
-    });
-
-    it('should throw error for invalid "label" when "label" is invalid', () => {
-      const entity = newEntityComponent({
-        [PROJECT_KEY]: 'TEST',
-        [LABEL]: 'critical$123',
-      });
-
-      expect(() =>
-        (testJiraClient as any).getFiltersFromEntity(entity),
-      ).toThrow(
-        'jira/label contains invalid characters. Only alphanumeric, hyphens, spaces, and underscores are allowed.',
-      );
-    });
-
-    it('should throw error for invalid "team" when "team" is invalid', () => {
-      const entity = newEntityComponent({
-        [PROJECT_KEY]: 'TEST',
-        [TEAM]: 'team-alpha$123',
-      });
-
-      expect(() =>
-        (testJiraClient as any).getFiltersFromEntity(entity),
-      ).toThrow(
-        'jira/team contains invalid characters. Only alphanumeric, hyphens, and underscores are allowed.',
-      );
-    });
-  });
-
-  describe('getIncidentFiltersFromEntity', () => {
-    it('should use incident project key and fallback to project key', () => {
-      const incidentEntity = newEntityComponent({
-        [INCIDENT_PROJECT_KEY]: 'INC',
         [PROJECT_KEY]: 'PROJ',
       });
-      const fallbackEntity = newEntityComponent({
-        [PROJECT_KEY]: 'PROJ',
-      });
 
-      const filtersWithIncidentProject = (
-        testJiraClient as any
-      ).getIncidentFiltersFromEntity(incidentEntity);
-      const filtersWithFallback = (
-        testJiraClient as any
-      ).getIncidentFiltersFromEntity(fallbackEntity);
+      const filters = (testJiraClient as any).getAnnotationFiltersFromEntity(
+        entity,
+        incidentAnnotationFilters,
+        { projectFallback: PROJECT_KEY },
+      );
 
-      expect(filtersWithIncidentProject).toEqual({
-        project: 'project = "INC"',
-      });
-      expect(filtersWithFallback).toEqual({
+      expect(filters).toEqual({
         project: 'project = "PROJ"',
       });
     });
+
+    it('incidents: should apply incident-specific component, label, team, and custom filter', () => {
+      const entity = newEntityComponent({
+        [INCIDENT_PROJECT_KEY]: 'INC',
+        [INCIDENT_COMPONENT]: 'Payments',
+        [INCIDENT_LABEL]: 'sev-1',
+        [INCIDENT_TEAM]: 'team-ops',
+        [INCIDENT_CUSTOM_FILTER]: 'priority = Highest',
+        [COMPONENT]: 'Ignored',
+        [LABEL]: 'ignored-label',
+        [TEAM]: 'ignored-team',
+        [CUSTOM_FILTER]: 'ignored = true',
+      });
+
+      const filters = (testJiraClient as any).getAnnotationFiltersFromEntity(
+        entity,
+        incidentAnnotationFilters,
+        { projectFallback: PROJECT_KEY },
+      );
+
+      expect(filters).toEqual({
+        project: 'project = "INC"',
+        component: 'component = "Payments"',
+        label: 'labels = "sev-1"',
+        team: 'team = team-ops',
+        customFilter: 'priority = Highest',
+      });
+    });
   });
 
-  describe('buildIncidentJql', () => {
+  describe('buildIncidentJqlFilters', () => {
     const options = {
       from: '2026-06-01T00:00:00.000Z',
       to: '2026-06-30T23:59:59.999Z',
@@ -350,10 +437,30 @@ describe('JiraClient', () => {
         [PROJECT_KEY]: 'PROJ',
       });
 
-      const jql = (testJiraClient as any).buildIncidentJql(entity, options);
+      const jql = (testJiraClient as any).buildIncidentJqlFilters(
+        entity,
+        options,
+      );
 
       expect(jql).toBe(
-        'project = "INC" AND type = Incident AND created >= "2026-06-01 00:00" AND created <= "2026-06-30 23:59"',
+        '(project = "INC") AND (type = Incident) AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+      );
+    });
+
+    it('should include optional incident filters in JQL', () => {
+      const entity = newEntityComponent({
+        [INCIDENT_PROJECT_KEY]: 'INC',
+        [INCIDENT_COMPONENT]: 'Payments',
+        [INCIDENT_LABEL]: 'sev-1',
+      });
+
+      const jql = (testJiraClient as any).buildIncidentJqlFilters(
+        entity,
+        options,
+      );
+
+      expect(jql).toBe(
+        '(project = "INC") AND (component = "Payments") AND (labels = "sev-1") AND (type = Incident) AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
       );
     });
 
@@ -362,17 +469,20 @@ describe('JiraClient', () => {
         [PROJECT_KEY]: 'PROJ',
       });
 
-      const jql = (testJiraClient as any).buildIncidentJql(entity, options);
+      const jql = (testJiraClient as any).buildIncidentJqlFilters(
+        entity,
+        options,
+      );
 
-      expect(jql).toContain('project = "PROJ"');
-      expect(jql).toContain('type = Incident');
+      expect(jql).toContain('(project = "PROJ")');
+      expect(jql).toContain('(type = Incident)');
     });
 
     it('should throw when neither incident nor project key annotation is present', () => {
       const entity = newEntityComponent();
 
       expect(() =>
-        (testJiraClient as any).buildIncidentJql(entity, options),
+        (testJiraClient as any).buildIncidentJqlFilters(entity, options),
       ).toThrow(
         `Missing required '${INCIDENT_PROJECT_KEY}' or '${PROJECT_KEY}' annotation for entity 'mock-entity'`,
       );

@@ -29,10 +29,6 @@ export interface JiraEntityFilters {
   customFilter?: string;
 }
 
-export interface JiraEntityIncidentFilters {
-  project: string;
-}
-
 export interface JiraIssue {
   id: string;
   createdAt: string;

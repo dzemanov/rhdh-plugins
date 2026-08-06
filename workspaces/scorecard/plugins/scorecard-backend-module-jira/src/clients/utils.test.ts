@@ -15,6 +15,7 @@
  */
 
 import {
+  joinJqlClauses,
   sanitizeValue,
   toIsoDateTime,
   toJiraDateTime,
@@ -50,6 +51,40 @@ describe('utils', () => {
   describe('sanitizeValue', () => {
     it('should sanitize value', () => {
       expect(sanitizeValue('T"EST\\123')).toBe('T\\"EST\\\\123');
+    });
+  });
+
+  describe('joinJqlClauses', () => {
+    it('wraps clauses in parentheses and joins with AND', () => {
+      expect(
+        joinJqlClauses([
+          'project = "INC"',
+          'type = Incident',
+          'created >= "2026-06-01 00:00"',
+        ]),
+      ).toBe(
+        '(project = "INC") AND (type = Incident) AND (created >= "2026-06-01 00:00")',
+      );
+    });
+
+    it('skips undefined, null, and empty clauses', () => {
+      expect(
+        joinJqlClauses([
+          'project = "INC"',
+          undefined,
+          null,
+          '',
+          'type = Incident',
+        ]),
+      ).toBe('(project = "INC") AND (type = Incident)');
+    });
+
+    it('returns an empty string when no clauses remain', () => {
+      expect(joinJqlClauses([undefined, null, ''])).toBe('');
+    });
+
+    it('wraps a single clause', () => {
+      expect(joinJqlClauses(['project = "INC"'])).toBe('(project = "INC")');
     });
   });
 

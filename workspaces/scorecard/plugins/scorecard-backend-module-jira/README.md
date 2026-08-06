@@ -210,7 +210,7 @@ Collectors in Scorecard are schema-validated at runtime. Any custom collector re
 - **Behavior**
   - Collects Jira issues with `type = Incident`
 
-Example entity annotatons for `jira:incidents` collector:
+Example entity annotations for `jira:incidents` collector:
 
 ```yaml
 # catalog-info.yaml

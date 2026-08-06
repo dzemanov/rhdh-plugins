@@ -12,7 +12,7 @@ Only resolved incidents are considered (`resolutionAt` is not `null`).
 For each resolved incident, recovery time is `resolutionAt - createdAt` in hours.
 The result is: `mean(recoveryHours)`.
 
-If there are no incidents, or only unresolved ones, the metric is `0`.
+If there are no incidents, or only unresolved ones, calculation fails with an error.
 If resolved incidents exist but none have a measurable recovery time (for example `resolutionAt` before `createdAt`), calculation fails with an error.
 
 ## Default thresholds

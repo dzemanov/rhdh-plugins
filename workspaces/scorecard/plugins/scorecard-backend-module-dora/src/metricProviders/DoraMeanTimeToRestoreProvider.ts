@@ -147,9 +147,9 @@ export class DoraMeanTimeToRestoreProvider implements MetricProvider<'number'> {
           `Unable to calculate mean time to restore: found ${invalidResolvedIncidents} resolved incident(s) with resolutionAt before createdAt and no measurable recovery times`,
         );
       }
-      // No incidents, or only unresolved incidents
-      results.set(this.getProviderId(), 0);
-      return results;
+      throw new Error(
+        'Unable to calculate mean time to restore: no resolved incidents with measurable recovery time were found',
+      );
     }
 
     results.set(

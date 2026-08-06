@@ -166,7 +166,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
       expect(results.get('dora.meanTimeToRestore')).toBe(3);
     });
 
-    it('should return 0 when no resolved incidents are found', async () => {
+    it('should throw when no resolved incidents are found', async () => {
       jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
         incidents: [
           {
@@ -177,19 +177,19 @@ describe('DoraMeanTimeToRestoreProvider', () => {
         ],
       });
 
-      const results = await provider.calculateMetrics(mockEntity);
-
-      expect(results.get('dora.meanTimeToRestore')).toBe(0);
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        'Unable to calculate mean time to restore: no resolved incidents with measurable recovery time were found',
+      );
     });
 
-    it('should return 0 when no incidents are found', async () => {
+    it('should throw when no incidents are found', async () => {
       jest.mocked(incidentsCollector.collect).mockResolvedValueOnce({
         incidents: [],
       });
 
-      const results = await provider.calculateMetrics(mockEntity);
-
-      expect(results.get('dora.meanTimeToRestore')).toBe(0);
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        'Unable to calculate mean time to restore: no resolved incidents with measurable recovery time were found',
+      );
     });
 
     it('should throw when resolved incidents are invalid and none are measurable', async () => {

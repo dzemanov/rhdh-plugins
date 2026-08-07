@@ -14,62 +14,192 @@
  * limitations under the License.
  */
 
+import {
+  newEntityComponent,
+  newMockRootConfig,
+} from '../../__fixtures__/testUtils';
+import {
+  ScorecardJiraAnnotations,
+  ScorecardJiraIncidentAnnotations,
+} from '../annotations';
 import { JiraClient } from '../clients/base';
 import { JiraIncidentsCollector } from './JiraIncidentsCollector';
 
+const { PROJECT_KEY } = ScorecardJiraAnnotations;
+const { INCIDENT_PROJECT_KEY, INCIDENT_ISSUE_TYPE } =
+  ScorecardJiraIncidentAnnotations;
+
 describe('JiraIncidentsCollector', () => {
-  it('collects incidents from Jira client', async () => {
-    const getIncidentIssues = jest.fn().mockResolvedValue([
-      {
-        id: 'INC-100',
-        createdAt: '2026-06-01T10:00:00.000Z',
-        resolutionAt: '2026-06-01T12:00:00.000Z',
-      },
-    ]);
-    const mockedJiraClient = {
-      getIncidentIssues,
-    } as unknown as jest.Mocked<JiraClient>;
-    const collector = new JiraIncidentsCollector(mockedJiraClient);
+  const mockJiraClient = {
+    getAnnotationFiltersFromEntity: jest.fn(),
+    getIncidentIssues: jest.fn(),
+  } as unknown as jest.Mocked<JiraClient>;
 
-    const result = await collector.collect({
-      entity: {
-        apiVersion: 'backstage.io/v1alpha1',
-        kind: 'Component',
-        metadata: {
-          name: 'service-a',
-          annotations: {
-            'jira/incident-project-key': 'INC',
-            'jira/project-key': 'PROJ',
-          },
-        },
-      },
-      input: {
-        from: '2026-06-01T00:00:00.000Z',
-        to: '2026-06-30T23:59:59.999Z',
-      },
-    });
+  let collector: JiraIncidentsCollector;
 
-    expect(result).toEqual({
-      incidents: [
-        {
-          id: 'INC-100',
-          createdAt: '2026-06-01T10:00:00.000Z',
-          resolutionAt: '2026-06-01T12:00:00.000Z',
-        },
-      ],
+  const input = {
+    from: '2026-06-01T00:00:00.000Z',
+    to: '2026-06-30T23:59:59.999Z',
+  };
+
+  const mockEntity = newEntityComponent({
+    [INCIDENT_PROJECT_KEY]: 'INC',
+  });
+
+  const defaultIncidents = [
+    {
+      id: 'INC-100',
+      createdAt: '2026-06-01T10:00:00.000Z',
+      resolutionAt: '2026-06-01T12:00:00.000Z',
+    },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
+      project: 'project = "INC"',
     });
-    expect(getIncidentIssues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        metadata: expect.objectContaining({
-          annotations: expect.objectContaining({
-            'jira/incident-project-key': 'INC',
-          }),
-        }),
-      }),
-      expect.objectContaining({
-        from: '2026-06-01T00:00:00.000Z',
-        to: '2026-06-30T23:59:59.999Z',
-      }),
+    mockJiraClient.getIncidentIssues.mockResolvedValue(defaultIncidents);
+    collector = JiraIncidentsCollector.fromConfig(
+      newMockRootConfig(),
+      mockJiraClient,
     );
+  });
+
+  describe('fromConfig', () => {
+    it('should load issueType from app-config', () => {
+      collector = JiraIncidentsCollector.fromConfig(
+        newMockRootConfig({
+          incidentOptions: { issueType: 'ServiceIncident' },
+        }),
+        mockJiraClient,
+      );
+
+      expect((collector as any).incidentOptions).toEqual({
+        issueType: 'ServiceIncident',
+      });
+    });
+
+    it('should leave empty options if not set in app-config', () => {
+      collector = JiraIncidentsCollector.fromConfig(
+        newMockRootConfig({}),
+        mockJiraClient,
+      );
+
+      expect((collector as any).incidentOptions).toEqual({
+        issueType: undefined,
+      });
+    });
+  });
+
+  describe('collect', () => {
+    it('should return incidents when Jira client processed successfully', async () => {
+      const result = await collector.collect({ entity: mockEntity, input });
+
+      expect(result).toEqual({ incidents: defaultIncidents });
+    });
+
+    it('should propagate errors from Jira client', async () => {
+      mockJiraClient.getIncidentIssues.mockRejectedValue(
+        new Error('Jira API error'),
+      );
+
+      await expect(
+        collector.collect({ entity: mockEntity, input }),
+      ).rejects.toThrow('Jira API error');
+    });
+
+    it('should use default issue type when app-config options are unset', async () => {
+      await collector.collect({ entity: mockEntity, input });
+
+      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+        '(project = "INC") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+      );
+    });
+
+    it('should overwrite default issue type with app-config issueType', async () => {
+      collector = JiraIncidentsCollector.fromConfig(
+        newMockRootConfig({
+          incidentOptions: { issueType: 'ServiceIncident' },
+        }),
+        mockJiraClient,
+      );
+
+      await collector.collect({ entity: mockEntity, input });
+
+      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+        '(project = "INC") AND (type = "ServiceIncident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+      );
+    });
+
+    it('should include entity annotation filters with default issue type', async () => {
+      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
+        project: 'project = "INC"',
+        component: 'component = "Payments"',
+        label: 'labels = "sev-1"',
+      });
+
+      await collector.collect({ entity: mockEntity, input });
+
+      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+        '(project = "INC") AND (component = "Payments") AND (labels = "sev-1") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+      );
+    });
+
+    it('should apply app-config issueType with entity annotation filters', async () => {
+      collector = JiraIncidentsCollector.fromConfig(
+        newMockRootConfig({
+          incidentOptions: { issueType: 'ServiceIncident' },
+        }),
+        mockJiraClient,
+      );
+      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
+        project: 'project = "INC"',
+        component: 'component = "Payments"',
+      });
+
+      await collector.collect({ entity: mockEntity, input });
+
+      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+        '(project = "INC") AND (component = "Payments") AND (type = "ServiceIncident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+      );
+    });
+
+    it('should prefer entity issue-type annotation over app-config', async () => {
+      collector = JiraIncidentsCollector.fromConfig(
+        newMockRootConfig({
+          incidentOptions: { issueType: 'ServiceIncident' },
+        }),
+        mockJiraClient,
+      );
+
+      await collector.collect({
+        entity: newEntityComponent({
+          [INCIDENT_PROJECT_KEY]: 'INC',
+          [INCIDENT_ISSUE_TYPE]: 'ProductionIncident',
+        }),
+        input,
+      });
+
+      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+        expect.stringContaining('(type = "ProductionIncident")'),
+      );
+      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+        expect.not.stringContaining('(type = "ServiceIncident")'),
+      );
+    });
+
+    it('should pass projectFallback when resolving annotation filters', async () => {
+      await collector.collect({
+        entity: newEntityComponent({ [PROJECT_KEY]: 'PROJ' }),
+        input,
+      });
+
+      expect(
+        mockJiraClient.getAnnotationFiltersFromEntity,
+      ).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+        projectFallback: PROJECT_KEY,
+      });
+    });
   });
 });

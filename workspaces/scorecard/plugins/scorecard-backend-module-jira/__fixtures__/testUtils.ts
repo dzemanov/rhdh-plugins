@@ -83,7 +83,9 @@ export function newMockRootConfig({
         jira: incidentOptions
           ? {
               collectors: {
-                incidents: incidentOptions,
+                incidents: {
+                  options: incidentOptions,
+                },
               },
             }
           : undefined,

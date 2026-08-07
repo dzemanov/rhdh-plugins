@@ -60,9 +60,9 @@ export class JiraClientFactory {
 
     switch (product) {
       case 'datacenter':
-        return new JiraDataCenterClientStrategy(config, connectionStrategy);
+        return new JiraDataCenterClientStrategy(connectionStrategy);
       case 'cloud':
-        return new JiraCloudClientStrategy(config, connectionStrategy);
+        return new JiraCloudClientStrategy(connectionStrategy);
       default:
         throw new Error(
           `Invalid Jira product: ${product}. Valid products for 'jira.product' are: datacenter, cloud`,

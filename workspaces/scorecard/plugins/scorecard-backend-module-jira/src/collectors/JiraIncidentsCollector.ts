@@ -14,14 +14,26 @@
  * limitations under the License.
  */
 
+import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
 import type { Collector } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { z } from 'zod';
+import {
+  ScorecardJiraAnnotations,
+  incidentAnnotationFilters,
+} from '../annotations';
 import { JiraClient } from '../clients/base';
+import {
+  parseJiraIncidentsConfigOptions,
+  type JiraIncidentOptions,
+} from './JiraIncidentsConfig';
+import { buildIncidentJql } from './incidentJql';
 import {
   incidentsCollectorInputSchema,
   incidentsCollectorOutputSchema,
 } from './schemas/incidentsSchemas';
+
+const { PROJECT_KEY } = ScorecardJiraAnnotations;
 
 export class JiraIncidentsCollector
   implements
@@ -34,9 +46,24 @@ export class JiraIncidentsCollector
   static readonly outputSchema = incidentsCollectorOutputSchema;
 
   private readonly jiraClient: JiraClient;
+  private readonly incidentOptions: JiraIncidentOptions;
 
-  public constructor(jiraClient: JiraClient) {
+  private constructor(
+    jiraClient: JiraClient,
+    incidentOptions: JiraIncidentOptions,
+  ) {
     this.jiraClient = jiraClient;
+    this.incidentOptions = incidentOptions;
+  }
+
+  static fromConfig(
+    config: Config,
+    jiraClient: JiraClient,
+  ): JiraIncidentsCollector {
+    return new JiraIncidentsCollector(
+      jiraClient,
+      parseJiraIncidentsConfigOptions(config),
+    );
   }
 
   getCollectorId(): string {
@@ -59,10 +86,21 @@ export class JiraIncidentsCollector
     entity: Entity;
     input: z.infer<(typeof JiraIncidentsCollector)['inputSchema']>;
   }): Promise<z.infer<(typeof JiraIncidentsCollector)['outputSchema']>> {
-    const incidents = await this.jiraClient.getIncidentIssues(options.entity, {
-      from: options.input.from,
-      to: options.input.to,
-    });
+    const entityFilters = this.jiraClient.getAnnotationFiltersFromEntity(
+      options.entity,
+      incidentAnnotationFilters,
+      { projectFallback: PROJECT_KEY },
+    );
+    const jql = buildIncidentJql(
+      entityFilters,
+      {
+        from: options.input.from,
+        to: options.input.to,
+        issueType: this.incidentOptions.issueType,
+      },
+      options.entity,
+    );
+    const incidents = await this.jiraClient.getIncidentIssues(jql);
 
     return {
       incidents,

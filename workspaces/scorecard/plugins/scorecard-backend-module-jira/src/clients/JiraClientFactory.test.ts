@@ -96,7 +96,6 @@ describe('JiraClientFactory', () => {
         'datacenter',
       );
       expect(JiraDataCenterClientStrategy).toHaveBeenCalledWith(
-        config,
         mockedDirectConnectionStrategy.mock.instances[0],
       );
     });
@@ -114,7 +113,6 @@ describe('JiraClientFactory', () => {
         factoryOptions.discovery,
       );
       expect(JiraDataCenterClientStrategy).toHaveBeenCalledWith(
-        config,
         mockedProxyConnectionStrategy.mock.instances[0],
       );
     });
@@ -133,7 +131,6 @@ describe('JiraClientFactory', () => {
         'cloud',
       );
       expect(JiraCloudClientStrategy).toHaveBeenCalledWith(
-        config,
         mockedDirectConnectionStrategy.mock.instances[0],
       );
     });
@@ -152,7 +149,6 @@ describe('JiraClientFactory', () => {
         factoryOptions.discovery,
       );
       expect(JiraCloudClientStrategy).toHaveBeenCalledWith(
-        config,
         mockedProxyConnectionStrategy.mock.instances[0],
       );
     });

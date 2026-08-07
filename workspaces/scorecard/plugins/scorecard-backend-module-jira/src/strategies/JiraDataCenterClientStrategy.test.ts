@@ -14,22 +14,10 @@
  * limitations under the License.
  */
 
-import type { Entity } from '@backstage/catalog-model';
 import { z } from 'zod';
-import {
-  ScorecardJiraAnnotations,
-  ScorecardJiraIncidentAnnotations,
-} from '../annotations';
 import { JiraDataCenterClientStrategy } from './JiraDataCenterClientStrategy';
-import {
-  newEntityComponent,
-  newMockRootConfig,
-} from '../../__fixtures__/testUtils';
 
 globalThis.fetch = jest.fn();
-
-const { PROJECT_KEY } = ScorecardJiraAnnotations;
-const { INCIDENT_PROJECT_KEY } = ScorecardJiraIncidentAnnotations;
 
 const mockConnectionStrategy = {
   getBaseUrl: jest.fn().mockReturnValue('https://example.com/api/rest/api/2'),
@@ -42,17 +30,7 @@ describe('JiraDataCenterClient', () => {
   let jiraDataCenterClient: JiraDataCenterClientStrategy;
 
   beforeEach(() => {
-    const options = {
-      mandatoryFilter: 'Type = Task',
-      customFilter: 'priority in ("Critical", "Blocker")',
-    };
-    const config = newMockRootConfig({
-      options,
-      jiraConfig: { product: 'datacenter' },
-    });
-
     jiraDataCenterClient = new JiraDataCenterClientStrategy(
-      config,
       mockConnectionStrategy,
     );
   });
@@ -103,17 +81,15 @@ describe('JiraDataCenterClient', () => {
   });
 
   describe('getCountOpenIssues', () => {
-    const mockEntity: Entity = newEntityComponent({
-      [PROJECT_KEY]: 'DATACENTER',
-    });
-
     it('should get count of open issues', async () => {
       (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce({ total: 10 }),
       });
 
-      const count = await jiraDataCenterClient.getCountOpenIssues(mockEntity);
+      const count = await jiraDataCenterClient.getCountOpenIssues(
+        'project = "DATACENTER"',
+      );
       expect(count).toBe(10);
     });
   });
@@ -309,16 +285,7 @@ describe('JiraDataCenterClient', () => {
   });
 
   describe('getIncidentIssues', () => {
-    const incidentOptions = {
-      from: '2026-06-01T00:00:00.000Z',
-      to: '2026-06-30T23:59:59.999Z',
-    };
-
     it('should return mapped Jira issues from /search', async () => {
-      const mockEntity = newEntityComponent({
-        [PROJECT_KEY]: 'PROJ',
-        [INCIDENT_PROJECT_KEY]: 'INC',
-      });
       (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce({
@@ -338,8 +305,7 @@ describe('JiraDataCenterClient', () => {
       });
 
       const issues = await jiraDataCenterClient.getIncidentIssues(
-        mockEntity,
-        incidentOptions,
+        '(project = "INC") AND (type = "Incident")',
       );
       const requestUrl = (globalThis.fetch as jest.Mock).mock.calls[0][0];
       const requestBody = JSON.parse(

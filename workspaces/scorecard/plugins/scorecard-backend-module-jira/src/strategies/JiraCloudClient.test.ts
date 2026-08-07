@@ -14,20 +14,8 @@
  * limitations under the License.
  */
 
-import type { Entity } from '@backstage/catalog-model';
 import { z } from 'zod';
 import { JiraCloudClientStrategy } from './JiraCloudClientStrategy';
-import {
-  ScorecardJiraAnnotations,
-  ScorecardJiraIncidentAnnotations,
-} from '../annotations';
-import {
-  newEntityComponent,
-  newMockRootConfig,
-} from '../../__fixtures__/testUtils';
-
-const { PROJECT_KEY } = ScorecardJiraAnnotations;
-const { INCIDENT_PROJECT_KEY } = ScorecardJiraIncidentAnnotations;
 
 globalThis.fetch = jest.fn();
 
@@ -42,14 +30,7 @@ describe('JiraCloudClient', () => {
   let jiraCloudClient: JiraCloudClientStrategy;
 
   beforeEach(() => {
-    const config = newMockRootConfig({
-      options: { mandatoryFilter: 'Type = Bug' },
-    });
-
-    jiraCloudClient = new JiraCloudClientStrategy(
-      config,
-      mockConnectionStrategy,
-    );
+    jiraCloudClient = new JiraCloudClientStrategy(mockConnectionStrategy);
   });
 
   afterEach(() => {
@@ -103,15 +84,15 @@ describe('JiraCloudClient', () => {
   });
 
   describe('getCountOpenIssues', () => {
-    const mockEntity: Entity = newEntityComponent({ [PROJECT_KEY]: 'TEST' });
-
     it('should get count with Basic auth header', async () => {
       (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce({ count: 5 }),
       });
 
-      const count = await jiraCloudClient.getCountOpenIssues(mockEntity);
+      const count = await jiraCloudClient.getCountOpenIssues(
+        'project = "TEST"',
+      );
       expect(count).toBe(5);
     });
   });
@@ -288,16 +269,7 @@ describe('JiraCloudClient', () => {
   });
 
   describe('getIncidentIssues', () => {
-    const incidentOptions = {
-      from: '2026-06-01T00:00:00.000Z',
-      to: '2026-06-30T23:59:59.999Z',
-    };
-
     it('should return mapped Jira issues from /search/jql', async () => {
-      const mockEntity = newEntityComponent({
-        [PROJECT_KEY]: 'PROJ',
-        [INCIDENT_PROJECT_KEY]: 'INC',
-      });
       (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: jest.fn().mockResolvedValueOnce({
@@ -315,8 +287,7 @@ describe('JiraCloudClient', () => {
       });
 
       const issues = await jiraCloudClient.getIncidentIssues(
-        mockEntity,
-        incidentOptions,
+        '(project = "INC") AND (type = "Incident")',
       );
       const requestUrl = (globalThis.fetch as jest.Mock).mock.calls[0][0];
       const requestBody = JSON.parse(

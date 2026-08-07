@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import type { Entity } from '@backstage/catalog-model';
 import type { JsonObject } from '@backstage/types';
 import { z } from 'zod';
 import { JiraClient } from '../clients/base';
@@ -115,19 +114,13 @@ export class JiraDataCenterClientStrategy extends JiraClient {
     return DATA_CENTER_API_VERSION;
   }
 
-  public async getIncidentIssues(
-    entity: Entity,
-    options: {
-      from: string;
-      to: string;
-    },
-  ): Promise<JiraIssue[]> {
+  public async getIncidentIssues(jql: string): Promise<JiraIssue[]> {
     const baseUrl = await this.getBaseUrl();
     return this.sendPaginatedRequest({
       url: `${baseUrl}/search`,
       method: 'POST',
       body: {
-        jql: this.buildIncidentJqlFilters(entity, options),
+        jql,
         fields: ['created', 'resolutiondate'],
       },
       responseSchema: z.object({

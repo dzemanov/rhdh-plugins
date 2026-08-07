@@ -14,29 +14,25 @@
  * limitations under the License.
  */
 
-export type Product = 'datacenter' | 'cloud';
+import type { Config } from '@backstage/config';
+import { INCIDENTS_CONFIG_PATH } from '../constants';
 
-export interface JiraEntityFilters {
-  project: string;
-  component?: string;
-  label?: string;
-  team?: string;
-  customFilter?: string;
+/** Scorecard Jira incidents collector options */
+export interface JiraIncidentOptions {
+  issueType?: string;
 }
 
-export interface JiraIssue {
-  id: string;
-  createdAt: string;
-  resolutionAt: string | null;
-}
+/**
+ * Parses incidents collector options from app-config.
+ */
+export function parseJiraIncidentsConfigOptions(
+  config: Config,
+): JiraIncidentOptions {
+  const optionsConfig = config.getOptionalConfig(
+    `${INCIDENTS_CONFIG_PATH}.options`,
+  );
 
-export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
-
-export type Header = Record<string, string> | {};
-
-export interface RequestOptions {
-  url: string;
-  method: Method;
-  headers?: Header;
-  body?: string;
+  return {
+    issueType: optionsConfig?.getOptionalString('issueType'),
+  };
 }

@@ -14,29 +14,26 @@
  * limitations under the License.
  */
 
-export type Product = 'datacenter' | 'cloud';
+import type { Config } from '@backstage/config';
+import { OPEN_ISSUES_CONFIG_PATH } from '../constants';
 
-export interface JiraEntityFilters {
-  project: string;
-  component?: string;
-  label?: string;
-  team?: string;
+export interface JiraOpenIssuesOptions {
+  mandatoryFilter?: string;
   customFilter?: string;
 }
 
-export interface JiraIssue {
-  id: string;
-  createdAt: string;
-  resolutionAt: string | null;
-}
+/**
+ * Parses open-issues provider options from app-config.
+ */
+export function parseJiraOpenIssuesConfigOptions(
+  config: Config,
+): JiraOpenIssuesOptions {
+  const optionsConfig = config.getOptionalConfig(
+    `${OPEN_ISSUES_CONFIG_PATH}.options`,
+  );
 
-export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
-
-export type Header = Record<string, string> | {};
-
-export interface RequestOptions {
-  url: string;
-  method: Method;
-  headers?: Header;
-  body?: string;
+  return {
+    mandatoryFilter: optionsConfig?.getOptionalString('mandatoryFilter'),
+    customFilter: optionsConfig?.getOptionalString('customFilter'),
+  };
 }

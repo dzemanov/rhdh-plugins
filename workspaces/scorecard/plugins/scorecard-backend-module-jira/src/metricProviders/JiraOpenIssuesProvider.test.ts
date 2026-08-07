@@ -14,48 +14,36 @@
  * limitations under the License.
  */
 
-import type { Config } from '@backstage/config';
-import type { Entity } from '@backstage/catalog-model';
 import { DEFAULT_NUMBER_THRESHOLDS } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
-import { JiraOpenIssuesProvider } from './JiraOpenIssuesProvider';
-import { JiraClientFactory } from '../clients/JiraClientFactory';
-import { JiraClient } from '../clients/base';
 import {
   newEntityComponent,
   newMockRootConfig,
 } from '../../__fixtures__/testUtils';
 import { ScorecardJiraAnnotations } from '../annotations';
-import { mockServices } from '@backstage/backend-test-utils';
+import { JiraClient } from '../clients/base';
+import { JiraOpenIssuesProvider } from './JiraOpenIssuesProvider';
+import { Entity } from '@backstage/catalog-model';
 
 const { PROJECT_KEY } = ScorecardJiraAnnotations;
 
-jest.mock('../clients/JiraClientFactory');
-
-const mockJiraClient = {
-  getCountOpenIssues: jest.fn(),
-} as unknown as jest.Mocked<JiraClient>;
-
-const mockEntity: Entity = newEntityComponent({
-  [PROJECT_KEY]: 'TEST',
-});
-
 describe('JiraOpenIssuesProvider', () => {
-  let mockConfig: Config;
+  const mockJiraClient = {
+    getAnnotationFiltersFromEntity: jest.fn(),
+    getCountOpenIssues: jest.fn(),
+  } as unknown as jest.Mocked<JiraClient>;
+
   let provider: JiraOpenIssuesProvider;
-  const mockAuthOptions = {
-    discovery: mockServices.discovery(),
-    auth: mockServices.auth(),
-  };
-  const mockedJiraClientFactory = JiraClientFactory as jest.Mocked<
-    typeof JiraClientFactory
-  >;
+
+  const mockEntity = newEntityComponent({ [PROJECT_KEY]: 'TEST' });
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockConfig = newMockRootConfig();
-    mockedJiraClientFactory.fromConfig.mockReturnValue(mockJiraClient);
-    provider = new JiraOpenIssuesProvider(
-      JiraClientFactory.fromConfig(mockConfig, mockAuthOptions),
+    mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
+      project: 'project = "TEST"',
+    });
+    provider = JiraOpenIssuesProvider.fromConfig(
+      newMockRootConfig(),
+      mockJiraClient,
     );
   });
 
@@ -100,33 +88,137 @@ describe('JiraOpenIssuesProvider', () => {
     });
   });
 
-  describe('calculateMetrics', () => {
-    it('should return the count of open issues when Jira client processed successfully', async () => {
-      mockJiraClient.getCountOpenIssues.mockResolvedValue(5);
+  describe('fromConfig', () => {
+    it('should load options from app-config', () => {
+      provider = JiraOpenIssuesProvider.fromConfig(
+        newMockRootConfig({
+          options: {
+            mandatoryFilter: 'type = Task',
+            customFilter: 'priority = High',
+          },
+        }),
+        mockJiraClient,
+      );
 
+      expect((provider as any).options).toEqual({
+        mandatoryFilter: 'type = Task',
+        customFilter: 'priority = High',
+      });
+    });
+
+    it('should leave empty options if not set in app-config', () => {
+      provider = JiraOpenIssuesProvider.fromConfig(
+        newMockRootConfig({}),
+        mockJiraClient,
+      );
+
+      expect((provider as any).options).toEqual({
+        mandatoryFilter: undefined,
+        customFilter: undefined,
+      });
+    });
+  });
+
+  describe('calculateMetrics', () => {
+    beforeEach(() => {
+      mockJiraClient.getCountOpenIssues.mockResolvedValue(5);
+    });
+
+    it('should return the count of open issues when Jira client processed successfully', async () => {
+      const results = await provider.calculateMetrics(mockEntity);
+
+      expect(results.get('jira.openIssues')).toBe(5);
+    });
+
+    it('should propagate errors from Jira client', async () => {
+      mockJiraClient.getCountOpenIssues.mockRejectedValue(
+        new Error('Jira API error'),
+      );
+
+      await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
+        'Jira API error',
+      );
+    });
+
+    it('should use default mandatory filter when app-config options are unset', async () => {
       const results = await provider.calculateMetrics(mockEntity);
 
       expect(results.get('jira.openIssues')).toBe(5);
       expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
-        mockEntity,
+        '(project = "TEST") AND (type = Bug AND resolution = Unresolved)',
       );
     });
 
-    describe('when Jira client processed with error', () => {
-      beforeEach(() => {
-        mockJiraClient.getCountOpenIssues.mockRejectedValue(
-          new Error('Jira API error'),
-        );
+    it('should overwrite default mandatory filter with app-config mandatoryFilter', async () => {
+      provider = JiraOpenIssuesProvider.fromConfig(
+        newMockRootConfig({
+          options: {
+            mandatoryFilter: 'type = Task AND resolution = Resolved',
+          },
+        }),
+        mockJiraClient,
+      );
+
+      await provider.calculateMetrics(mockEntity);
+
+      expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
+        '(project = "TEST") AND (type = Task AND resolution = Resolved)',
+      );
+    });
+
+    it('should apply app-config mandatoryFilter and customFilter', async () => {
+      provider = JiraOpenIssuesProvider.fromConfig(
+        newMockRootConfig({
+          options: {
+            mandatoryFilter: 'type = Task AND resolution = Resolved',
+            customFilter: 'assignee = testerUser',
+          },
+        }),
+        mockJiraClient,
+      );
+
+      await provider.calculateMetrics(mockEntity);
+
+      expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
+        '(project = "TEST") AND (type = Task AND resolution = Resolved) AND (assignee = testerUser)',
+      );
+    });
+
+    it('should include entity annotation filters without custom-filter with default mandatory filter', async () => {
+      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
+        project: 'project = "TEST"',
+        component: 'component = "backend"',
+        label: 'labels = "critical"',
+        team: 'team = 4316',
       });
 
-      it('should propagate errors from Jira client', async () => {
-        await expect(provider.calculateMetrics(mockEntity)).rejects.toThrow(
-          'Jira API error',
-        );
-        expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
-          mockEntity,
-        );
+      await provider.calculateMetrics(mockEntity);
+
+      expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
+        '(project = "TEST") AND (component = "backend") AND (labels = "critical") AND (team = 4316) AND (type = Bug AND resolution = Unresolved)',
+      );
+    });
+
+    it('should prefer entity custom-filter annotation over app-config customFilter', async () => {
+      provider = JiraOpenIssuesProvider.fromConfig(
+        newMockRootConfig({
+          options: {
+            mandatoryFilter: 'resolution = Unresolved',
+            customFilter: 'assignee = fromConfig',
+          },
+        }),
+        mockJiraClient,
+      );
+      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
+        project: 'project = "TEST"',
+        customFilter: 'assignee = fromAnnotation',
       });
+
+      await provider.calculateMetrics(mockEntity);
+
+      expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
+        '(project = "TEST") AND (assignee = fromAnnotation) AND (resolution = Unresolved)',
+      );
     });
   });
 });

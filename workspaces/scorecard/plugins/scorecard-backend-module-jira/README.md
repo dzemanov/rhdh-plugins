@@ -88,16 +88,19 @@ scorecard:
   jira:
     collectors:
       incidents:
-        # Optional: Jira issue type for jira:incidents (default: Incident).
-        # Overridden by entity annotation jira/incident-issue-type when set.
-        issueType: Incident
+        options:
+          # Optional: Jira issue type for jira:incidents (default: Incident).
+          # Overridden by entity annotation jira/incident-issue-type when set.
+          issueType: Incident
   plugins:
     jira:
       openIssues:
         options:
-          # Optional: use mandatoryFilter filter if need to replaces default which is "type = Bug AND resolution = Unresolved"
-          mandatoryFilter: Type = Task AND Resolution = Resolved
-          # Optional: use to specify global customFilter, however the annotation `jira/custom-filter` will replaces them
+          # Optional: replaces the default mandatory filter
+          # ("type = Bug AND resolution = Unresolved")
+          mandatoryFilter: type = Task AND resolution = Resolved
+          # Optional: global custom filter. Overridden by entity annotation
+          # jira/custom-filter when that annotation is set.
           customFilter: priority in ("Critical", "Blocker")
 ```
 
@@ -171,7 +174,7 @@ metadata:
     jira/label: UI
     # Optional: recommended to use Jira team ID instead of team title
     jira/team: 9d3ea319-fb5b-4621-9dab-05fe502283e
-    # Optional: Custom filters for loading data request. This filter replaces customFilters form app-config.yaml
+    # Optional: Custom JQL; overrides app-config openIssues.options.customFilter
     jira/custom-filter: 'reporter = "psycon98@yahoo.com" AND resolution is not EMPTY'
 spec:
   type: website

@@ -41,12 +41,14 @@ export interface Config {
     jira?: {
       collectors?: {
         incidents?: {
-          /**
-           * Jira issue type used by the `jira:incidents` collector.
-           * Defaults to `Incident`. Overridden by entity annotation
-           * `jira/incident-issue-type` when set.
-           */
-          issueType?: string;
+          options?: {
+            /**
+             * Jira issue type used by the `jira:incidents` collector.
+             * Defaults to `Incident`. Overridden by entity annotation
+             * `jira/incident-issue-type` when set.
+             */
+            issueType?: string;
+          };
         };
       };
     };

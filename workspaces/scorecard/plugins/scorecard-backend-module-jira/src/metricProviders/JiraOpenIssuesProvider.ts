@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { Config } from '@backstage/config';
 import { CATALOG_FILTER_EXISTS } from '@backstage/catalog-client';
 import type { Entity } from '@backstage/catalog-model';
 import {
@@ -21,16 +22,36 @@ import {
   Metric,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { MetricProvider } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
-import { ScorecardJiraAnnotations } from '../annotations';
+import {
+  ScorecardJiraAnnotations,
+  openIssuesAnnotationFilters,
+} from '../annotations';
 import { JiraClient } from '../clients/base';
+import {
+  parseJiraOpenIssuesConfigOptions,
+  type JiraOpenIssuesOptions,
+} from './JiraOpenIssuesConfig';
+import { buildOpenIssuesJql } from './openIssuesJql';
 
 const { PROJECT_KEY } = ScorecardJiraAnnotations;
 
 export class JiraOpenIssuesProvider implements MetricProvider<'number'> {
   private readonly jiraClient: JiraClient;
+  private readonly options: JiraOpenIssuesOptions;
 
-  public constructor(jiraClient: JiraClient) {
+  private constructor(jiraClient: JiraClient, options: JiraOpenIssuesOptions) {
     this.jiraClient = jiraClient;
+    this.options = options;
+  }
+
+  static fromConfig(
+    config: Config,
+    jiraClient: JiraClient,
+  ): JiraOpenIssuesProvider {
+    return new JiraOpenIssuesProvider(
+      jiraClient,
+      parseJiraOpenIssuesConfigOptions(config),
+    );
   }
 
   getCatalogFilter(): Record<string, string | symbol | (string | symbol)[]> {
@@ -66,7 +87,12 @@ export class JiraOpenIssuesProvider implements MetricProvider<'number'> {
   }
 
   async calculateMetrics(entity: Entity): Promise<Map<string, number>> {
-    const value = await this.jiraClient.getCountOpenIssues(entity);
+    const entityFilters = this.jiraClient.getAnnotationFiltersFromEntity(
+      entity,
+      openIssuesAnnotationFilters,
+    );
+    const jql = buildOpenIssuesJql(entityFilters, this.options);
+    const value = await this.jiraClient.getCountOpenIssues(jql);
     const results = new Map<string, number>();
     results.set(this.getProviderId(), value);
     return results;

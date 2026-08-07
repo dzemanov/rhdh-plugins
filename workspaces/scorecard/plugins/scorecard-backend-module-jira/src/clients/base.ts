@@ -14,68 +14,18 @@
  * limitations under the License.
  */
 
-import type { Config } from '@backstage/config';
 import type { Entity } from '@backstage/catalog-model';
 import type { JsonObject } from '@backstage/types';
 import type { z } from 'zod';
-import {
-  JiraEntityFilters,
-  JiraIncidentOptions,
-  JiraIssue,
-  JiraOptions,
-  Method,
-  RequestOptions,
-} from './types';
-import {
-  DEFAULT_INCIDENT_ISSUE_TYPE,
-  INCIDENTS_CONFIG_PATH,
-  JIRA_MANDATORY_FILTER,
-  OPEN_ISSUES_CONFIG_PATH,
-} from '../constants';
-import {
-  ScorecardJiraAnnotations,
-  ScorecardJiraIncidentAnnotations,
-  incidentAnnotationFilters,
-  openIssuesAnnotationFilters,
-} from '../annotations';
-import {
-  joinJqlClauses,
-  sanitizeValue,
-  toJiraDateTime,
-  validateIdentifier,
-  validateJQLValue,
-} from './utils';
+import { JiraEntityFilters, JiraIssue, Method, RequestOptions } from './types';
+import { sanitizeValue, validateIdentifier, validateJQLValue } from './utils';
 import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
 
-const { PROJECT_KEY } = ScorecardJiraAnnotations;
-const { INCIDENT_ISSUE_TYPE } = ScorecardJiraIncidentAnnotations;
-
 export abstract class JiraClient {
-  protected readonly options?: JiraOptions;
-  protected readonly incidentOptions?: JiraIncidentOptions;
   protected readonly connectionStrategy: ConnectionStrategy;
 
-  constructor(rootConfig: Config, connectionStrategy: ConnectionStrategy) {
+  constructor(connectionStrategy: ConnectionStrategy) {
     this.connectionStrategy = connectionStrategy;
-
-    const openIssuesOptions = rootConfig.getOptionalConfig(
-      `${OPEN_ISSUES_CONFIG_PATH}.options`,
-    );
-    if (openIssuesOptions) {
-      this.options = {
-        mandatoryFilter: openIssuesOptions.getOptionalString('mandatoryFilter'),
-        customFilter: openIssuesOptions.getOptionalString('customFilter'),
-      };
-    }
-
-    const incidentCollectorOptions = rootConfig.getOptionalConfig(
-      INCIDENTS_CONFIG_PATH,
-    );
-    if (incidentCollectorOptions) {
-      this.incidentOptions = {
-        issueType: incidentCollectorOptions.getOptionalString('issueType'),
-      };
-    }
   }
 
   protected abstract getSearchCountEndpoint(): string;
@@ -86,13 +36,7 @@ export abstract class JiraClient {
 
   protected abstract getApiVersion(): number;
 
-  public abstract getIncidentIssues(
-    entity: Entity,
-    options: {
-      from: string;
-      to: string;
-    },
-  ): Promise<JiraIssue[]>;
+  public abstract getIncidentIssues(jql: string): Promise<JiraIssue[]>;
 
   protected async sendRequest({
     url,
@@ -139,7 +83,7 @@ export abstract class JiraClient {
     fetchItemsLimit?: number;
   }): Promise<TOut[]>;
 
-  private getAnnotationFiltersFromEntity(
+  public getAnnotationFiltersFromEntity(
     entity: Entity,
     keys: JiraEntityFilters,
     options?: { projectFallback?: string },
@@ -213,64 +157,6 @@ export abstract class JiraClient {
     return filters;
   }
 
-  protected buildIncidentJqlFilters(
-    entity: Entity,
-    options: {
-      from: string;
-      to: string;
-    },
-  ): string {
-    const filters = this.getAnnotationFiltersFromEntity(
-      entity,
-      incidentAnnotationFilters,
-      { projectFallback: PROJECT_KEY },
-    );
-    const from = toJiraDateTime(options.from);
-    const to = toJiraDateTime(options.to);
-    const issueType = this.resolveIncidentIssueType(entity);
-
-    return joinJqlClauses([
-      ...Object.values(filters),
-      `type = "${issueType}"`,
-      `created >= "${from}"`,
-      `created <= "${to}"`,
-    ]);
-  }
-
-  private resolveIncidentIssueType(entity: Entity): string {
-    const annotations = entity.metadata?.annotations || {};
-    const issueType =
-      annotations[INCIDENT_ISSUE_TYPE] ||
-      this.incidentOptions?.issueType ||
-      DEFAULT_INCIDENT_ISSUE_TYPE;
-
-    return validateJQLValue(
-      sanitizeValue(issueType),
-      annotations[INCIDENT_ISSUE_TYPE]
-        ? INCIDENT_ISSUE_TYPE
-        : 'incident issue type',
-    );
-  }
-
-  protected buildJqlFilters(filters: JiraEntityFilters): string {
-    const { customFilter: annotationCustomFilter } = filters;
-    const { mandatoryFilter, customFilter: optionsCustomFilter } =
-      this.options || {};
-
-    const defaultFilterQuery = mandatoryFilter ?? JIRA_MANDATORY_FILTER;
-
-    const customFilterQuery =
-      !annotationCustomFilter && optionsCustomFilter
-        ? optionsCustomFilter
-        : null;
-
-    return joinJqlClauses([
-      ...Object.values(filters),
-      defaultFilterQuery,
-      customFilterQuery,
-    ]);
-  }
-
   protected async getBaseUrl(): Promise<string> {
     const apiVersion = this.getApiVersion();
     return this.connectionStrategy.getBaseUrl(apiVersion);
@@ -280,15 +166,9 @@ export abstract class JiraClient {
     return this.connectionStrategy.getAuthHeaders();
   }
 
-  public async getCountOpenIssues(entity: Entity): Promise<number> {
+  public async getCountOpenIssues(jql: string): Promise<number> {
     const baseUrl = await this.getBaseUrl();
     const countOpenIssuesUrl = `${baseUrl}${this.getSearchCountEndpoint()}`;
-
-    const filters = this.getAnnotationFiltersFromEntity(
-      entity,
-      openIssuesAnnotationFilters,
-    );
-    const jql = this.buildJqlFilters(filters);
     const headers = await this.getAuthHeaders();
 
     const data = await this.sendRequest({

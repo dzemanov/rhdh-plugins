@@ -132,7 +132,7 @@ scorecard:
         options:
           productionEnvironments: [production, prod]
           collectors:
-          deployments:
+           deployments:
             id: customDatasource:deployments
             input:
               # merged with generated from/to window

@@ -92,7 +92,7 @@ describe('JiraClientFactory', () => {
       expect(client).toBeInstanceOf(JiraDataCenterClientStrategy);
       expect(mockedDirectConnectionStrategy).toHaveBeenCalledWith(
         'https://example.com/api',
-        'Fds31dsF32',
+        'dummyToken',
         'datacenter',
       );
       expect(JiraDataCenterClientStrategy).toHaveBeenCalledWith(
@@ -127,7 +127,7 @@ describe('JiraClientFactory', () => {
       expect(client).toBeInstanceOf(JiraCloudClientStrategy);
       expect(mockedDirectConnectionStrategy).toHaveBeenCalledWith(
         'https://example.com/api',
-        'Fds31dsF32',
+        'dummyToken',
         'cloud',
       );
       expect(JiraCloudClientStrategy).toHaveBeenCalledWith(

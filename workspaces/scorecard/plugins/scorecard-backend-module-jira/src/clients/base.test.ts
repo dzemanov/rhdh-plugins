@@ -75,7 +75,7 @@ describe('JiraClient', () => {
         .mockReturnValue('https://example.com/api/rest/api/3'),
       getAuthHeaders: jest
         .fn()
-        .mockResolvedValue({ Authorization: 'Basic Fds31dsF32' }),
+        .mockResolvedValue({ Authorization: 'Basic dummyToken' }),
     };
 
     testJiraClient = new TestJiraClient(mockConnectionStrategy);
@@ -204,7 +204,7 @@ describe('JiraClient', () => {
   describe('getAuthHeaders', () => {
     it('should return auth header', async () => {
       const authHeaders = await (testJiraClient as any).getAuthHeaders();
-      expect(authHeaders).toEqual({ Authorization: 'Basic Fds31dsF32' });
+      expect(authHeaders).toEqual({ Authorization: 'Basic dummyToken' });
     });
   });
 
@@ -226,7 +226,7 @@ describe('JiraClient', () => {
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
-            Authorization: 'Basic Fds31dsF32',
+            Authorization: 'Basic dummyToken',
           }),
           body: JSON.stringify({ jql: 'project = "TEST"' }),
         }),

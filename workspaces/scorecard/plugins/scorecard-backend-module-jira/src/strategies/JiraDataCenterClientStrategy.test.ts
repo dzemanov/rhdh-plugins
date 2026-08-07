@@ -23,7 +23,7 @@ const mockConnectionStrategy = {
   getBaseUrl: jest.fn().mockReturnValue('https://example.com/api/rest/api/2'),
   getAuthHeaders: jest
     .fn()
-    .mockResolvedValue({ Authorization: 'Bearer Fds31dsF32' }),
+    .mockResolvedValue({ Authorization: 'Bearer dummyToken' }),
 };
 
 describe('JiraDataCenterClient', () => {

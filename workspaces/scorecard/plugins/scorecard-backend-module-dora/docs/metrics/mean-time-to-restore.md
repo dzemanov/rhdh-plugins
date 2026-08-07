@@ -56,7 +56,7 @@ Optional incident-only filters:
 - `jira/incident-label`
 - `jira/incident-team`
 - `jira/incident-custom-filter`
-- `jira/incident-issue-type` (overrides app-config `scorecard.jira.collectors.incidents.issueType`; default issue type is `Incident`)
+- `jira/incident-issue-type` (overrides app-config `scorecard.plugins.jira.collectors.incidents.options.issueType`; default issue type is `Incident`)
 
 #### Incidents collector contract
 

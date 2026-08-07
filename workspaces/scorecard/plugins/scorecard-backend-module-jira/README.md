@@ -84,16 +84,15 @@ Options define configuration that affect fetch jira issues global configuration,
 ```yaml
 # app-config.yaml
 scorecard:
-  # Scorecard-owned Jira datasource settings (auth stays under top-level jira:)
-  jira:
-    collectors:
-      incidents:
-        options:
-          # Optional: Jira issue type for jira:incidents (default: Incident).
-          # Overridden by entity annotation jira/incident-issue-type when set.
-          issueType: Incident
   plugins:
     jira:
+      # Scorecard-owned Jira datasource settings (auth stays under top-level jira:)
+      collectors:
+        incidents:
+          options:
+            # Optional: Jira issue type for jira:incidents (default: Incident).
+            # Overridden by entity annotation jira/incident-issue-type when set.
+            issueType: Incident
       openIssues:
         options:
           # Optional: replaces the default mandatory filter

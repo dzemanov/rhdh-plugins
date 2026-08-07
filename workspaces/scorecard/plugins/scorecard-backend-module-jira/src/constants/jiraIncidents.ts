@@ -15,6 +15,6 @@
  */
 
 export const INCIDENTS_CONFIG_PATH =
-  'scorecard.jira.collectors.incidents' as const;
+  'scorecard.plugins.jira.collectors.incidents' as const;
 
 export const DEFAULT_INCIDENT_ISSUE_TYPE = 'Incident' as const;

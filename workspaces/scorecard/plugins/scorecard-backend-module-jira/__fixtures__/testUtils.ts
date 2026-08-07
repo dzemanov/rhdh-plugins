@@ -80,17 +80,15 @@ export function newMockRootConfig({
     data: {
       jira,
       scorecard: {
-        jira: incidentOptions
-          ? {
-              collectors: {
-                incidents: {
-                  options: incidentOptions,
-                },
-              },
-            }
-          : undefined,
         plugins: {
           jira: {
+            collectors: incidentOptions
+              ? {
+                  incidents: {
+                    options: incidentOptions,
+                  },
+                }
+              : undefined,
             openIssues: {
               options,
               thresholds,

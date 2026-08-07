@@ -26,21 +26,31 @@ describe('buildIncidentJql', () => {
     to: '2026-06-30T23:59:59.999Z',
   };
 
-  it('should build JQL using filters and date bounds', () => {
-    const entity = newEntityComponent();
-    const jql = buildIncidentJql(
-      { project: 'project = "INC"' },
-      options,
-      entity,
-    );
+  const baseFilters = {
+    project: 'project = "INC"',
+  };
+
+  it('should use default issue type and date bounds when app-config options are unset', () => {
+    const jql = buildIncidentJql(baseFilters, options, newEntityComponent());
 
     expect(jql).toBe(
       '(project = "INC") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
     );
   });
 
-  it('should include optional incident filters in JQL', () => {
-    const entity = newEntityComponent();
+  it('should apply app-config issueType instead of default issue type', () => {
+    const jql = buildIncidentJql(
+      baseFilters,
+      { ...options, issueType: 'ServiceIncident' },
+      newEntityComponent(),
+    );
+
+    expect(jql).toBe(
+      '(project = "INC") AND (type = "ServiceIncident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
+    );
+  });
+
+  it('should apply entity filters with default issue type and date bounds', () => {
     const jql = buildIncidentJql(
       {
         project: 'project = "INC"',
@@ -48,7 +58,7 @@ describe('buildIncidentJql', () => {
         label: 'labels = "sev-1"',
       },
       options,
-      entity,
+      newEntityComponent(),
     );
 
     expect(jql).toBe(
@@ -56,44 +66,18 @@ describe('buildIncidentJql', () => {
     );
   });
 
-  it('should use incident issue type from entity annotation', () => {
-    const entity = newEntityComponent({
-      [INCIDENT_ISSUE_TYPE]: 'Production Incident',
-    });
-
+  it('should prefer entity issue-type annotation over app-config issueType', () => {
     const jql = buildIncidentJql(
-      { project: 'project = "INC"' },
-      options,
-      entity,
+      baseFilters,
+      { ...options, issueType: 'ServiceIncident' },
+      newEntityComponent({
+        [INCIDENT_ISSUE_TYPE]: 'ProductionIncident',
+      }),
     );
 
-    expect(jql).toContain('(type = "Production Incident")');
-  });
-
-  it('should use configured issue type when annotation is not set', () => {
-    const entity = newEntityComponent();
-
-    const jql = buildIncidentJql(
-      { project: 'project = "INC"' },
-      { ...options, issueType: 'Service Incident' },
-      entity,
+    expect(jql).toBe(
+      '(project = "INC") AND (type = "ProductionIncident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
     );
-
-    expect(jql).toContain('(type = "Service Incident")');
-  });
-
-  it('should prefer entity annotation issue type over configured issue type', () => {
-    const entity = newEntityComponent({
-      [INCIDENT_ISSUE_TYPE]: 'Production Incident',
-    });
-
-    const jql = buildIncidentJql(
-      { project: 'project = "INC"' },
-      { ...options, issueType: 'Service Incident' },
-      entity,
-    );
-
-    expect(jql).toContain('(type = "Production Incident")');
-    expect(jql).not.toContain('(type = "Service Incident")');
+    expect(jql).not.toContain('(type = "ServiceIncident")');
   });
 });

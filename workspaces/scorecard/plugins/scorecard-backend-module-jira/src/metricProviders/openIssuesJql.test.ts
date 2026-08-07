@@ -22,46 +22,78 @@ describe('buildOpenIssuesJql', () => {
     project: 'project = "MOON"',
   };
 
-  const openIssuesOptions = {
+  const appConfigOptions = {
     mandatoryFilter: 'type = Task AND resolution = Resolved',
     customFilter: 'assignee = testerUser',
   };
 
-  it('should use provided mandatory filter when mandatory filter is provided in options', () => {
-    const jql = buildOpenIssuesJql(baseFilters, openIssuesOptions);
-    const jqlFilters = jql.split(' AND ');
+  it('should use default mandatory filter when app-config options are unset', () => {
+    const jql = buildOpenIssuesJql(baseFilters, {});
 
-    expect(jqlFilters).toHaveLength(4);
-    expect(jqlFilters).toContain('(project = "MOON")');
-    expect(jql).toContain('(type = Task AND resolution = Resolved)');
-    expect(jqlFilters).toContain('(assignee = testerUser)');
+    expect(jql).toBe(
+      '(project = "MOON") AND (type = Bug AND resolution = Unresolved)',
+    );
   });
 
-  it('should use provided mandatory filter from options argument', () => {
+  it('should apply app-config mandatoryFilter instead of default mandatory filter', () => {
     const jql = buildOpenIssuesJql(baseFilters, {
-      mandatoryFilter: 'team = 4316',
+      mandatoryFilter: 'type = Bug AND resolution = Unresolved AND team = 4333',
     });
-    expect(jql).toBe('(project = "MOON") AND (team = 4316)');
+
+    expect(jql).toBe(
+      '(project = "MOON") AND (type = Bug AND resolution = Unresolved AND team = 4333)',
+    );
   });
 
-  it('should use provided annotation custom filter when custom filter is provided in annotation and options', () => {
+  it('should apply app-config customFilter with default mandatory filter', () => {
+    const jql = buildOpenIssuesJql(baseFilters, {
+      customFilter: 'team = 4316',
+    });
+
+    expect(jql).toBe(
+      '(project = "MOON") AND (type = Bug AND resolution = Unresolved) AND (team = 4316)',
+    );
+  });
+
+  it('should apply app-config mandatoryFilter and customFilter', () => {
+    const jql = buildOpenIssuesJql(baseFilters, appConfigOptions);
+
+    expect(jql).toBe(
+      '(project = "MOON") AND (type = Task AND resolution = Resolved) AND (assignee = testerUser)',
+    );
+  });
+
+  it('should apply entity filters with default mandatory filter', () => {
+    const jql = buildOpenIssuesJql(
+      {
+        project: 'project = "MOON"',
+        component: 'component = "frontend"',
+        label: 'labels = "critical"',
+      },
+      {},
+    );
+
+    expect(jql).toBe(
+      '(project = "MOON") AND (component = "frontend") AND (labels = "critical") AND (type = Bug AND resolution = Unresolved)',
+    );
+  });
+
+  it('should prefer entity custom-filter annotation over app-config customFilter', () => {
     const jql = buildOpenIssuesJql(
       {
         ...baseFilters,
         customFilter: 'assignee = Automobile',
       },
-      openIssuesOptions,
+      appConfigOptions,
     );
-    const jqlFilters = jql.split(' AND ');
 
-    expect(jqlFilters).toHaveLength(4);
-    expect(jqlFilters).toContain('(project = "MOON")');
-    expect(jqlFilters).toContain('(assignee = Automobile)');
-    expect(jql).toContain('(type = Task AND resolution = Resolved)');
+    expect(jql).toBe(
+      '(project = "MOON") AND (assignee = Automobile) AND (type = Task AND resolution = Resolved)',
+    );
     expect(jql).not.toContain('(assignee = testerUser)');
   });
 
-  it('should use provided annotation custom filter when custom filter is provided in annotation and not in options', () => {
+  it('should apply entity custom-filter with app-config mandatoryFilter', () => {
     const jql = buildOpenIssuesJql(
       {
         ...baseFilters,
@@ -69,25 +101,9 @@ describe('buildOpenIssuesJql', () => {
       },
       { mandatoryFilter: 'resolution = Unresolved' },
     );
+
     expect(jql).toBe(
       '(project = "MOON") AND (assignee = Robot) AND (resolution = Unresolved)',
-    );
-  });
-
-  it('should use provided options custom filter when custom filter is provided in options and not in annotation', () => {
-    const jql = buildOpenIssuesJql(baseFilters, openIssuesOptions);
-    const jqlFilters = jql.split(' AND ');
-
-    expect(jqlFilters).toHaveLength(4);
-    expect(jqlFilters).toContain('(project = "MOON")');
-    expect(jqlFilters).toContain('(assignee = testerUser)');
-  });
-
-  it('should not use any custom filters when custom filter is not provided in annotation and options', () => {
-    const jql = buildOpenIssuesJql(baseFilters, {});
-
-    expect(jql).toBe(
-      '(project = "MOON") AND (type = Bug AND resolution = Unresolved)',
     );
   });
 });

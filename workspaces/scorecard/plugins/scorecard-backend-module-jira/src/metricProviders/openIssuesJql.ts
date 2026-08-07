@@ -26,10 +26,12 @@ export function buildOpenIssuesJql(
   const { customFilter: annotationCustomFilter } = entityFilters;
   const { mandatoryFilter, customFilter: optionsCustomFilter } = configOptions;
 
-  const defaultFilterQuery = mandatoryFilter ?? JIRA_MANDATORY_FILTER;
+  const defaultFilterQuery = mandatoryFilter?.trim() || JIRA_MANDATORY_FILTER;
 
   const customFilterQuery =
-    !annotationCustomFilter && optionsCustomFilter ? optionsCustomFilter : null;
+    !annotationCustomFilter && optionsCustomFilter?.trim()
+      ? optionsCustomFilter
+      : null;
 
   return joinJqlClauses([
     ...Object.values(entityFilters),

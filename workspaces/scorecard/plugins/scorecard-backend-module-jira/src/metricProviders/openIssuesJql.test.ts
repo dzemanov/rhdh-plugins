@@ -35,6 +35,14 @@ describe('buildOpenIssuesJql', () => {
     );
   });
 
+  it('should use default mandatory filter when app-config mandatoryFilter is empty', () => {
+    const jql = buildOpenIssuesJql(baseFilters, { mandatoryFilter: '   ' });
+
+    expect(jql).toBe(
+      '(project = "MOON") AND (type = Bug AND resolution = Unresolved)',
+    );
+  });
+
   it('should apply app-config mandatoryFilter instead of default mandatory filter', () => {
     const jql = buildOpenIssuesJql(baseFilters, {
       mandatoryFilter: 'type = Bug AND resolution = Unresolved AND team = 4333',

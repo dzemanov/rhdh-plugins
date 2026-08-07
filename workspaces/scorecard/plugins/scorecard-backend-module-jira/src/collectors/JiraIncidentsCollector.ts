@@ -19,8 +19,9 @@ import type { Entity } from '@backstage/catalog-model';
 import type { Collector } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import { z } from 'zod';
 import {
+  buildJqlFiltersFromEntity,
+  INCIDENT_FILTER_ANNOTATIONS,
   ScorecardJiraAnnotations,
-  incidentAnnotationFilters,
 } from '../annotations';
 import { JiraClient } from '../clients/base';
 import {
@@ -86,9 +87,9 @@ export class JiraIncidentsCollector
     entity: Entity;
     input: z.infer<(typeof JiraIncidentsCollector)['inputSchema']>;
   }): Promise<z.infer<(typeof JiraIncidentsCollector)['outputSchema']>> {
-    const entityFilters = this.jiraClient.getAnnotationFiltersFromEntity(
+    const entityFilters = buildJqlFiltersFromEntity(
       options.entity,
-      incidentAnnotationFilters,
+      INCIDENT_FILTER_ANNOTATIONS,
       { projectFallback: PROJECT_KEY },
     );
     const jql = buildIncidentJql(

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import type { JiraEntityFilters } from '../clients/types';
+import type { JiraJqlFilters } from '../annotations';
 import { buildOpenIssuesJql } from './openIssuesJql';
 
 describe('buildOpenIssuesJql', () => {
-  const baseFilters: JiraEntityFilters = {
+  const baseFilters: JiraJqlFilters = {
     project: 'project = "MOON"',
   };
 

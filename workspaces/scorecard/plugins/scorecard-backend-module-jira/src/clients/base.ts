@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-import type { Entity } from '@backstage/catalog-model';
 import type { JsonObject } from '@backstage/types';
 import type { z } from 'zod';
-import { JiraEntityFilters, JiraIssue, Method, RequestOptions } from './types';
-import { sanitizeValue, validateIdentifier, validateJQLValue } from './utils';
+import { JiraIssue, Method, RequestOptions } from './types';
 import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
 
 export abstract class JiraClient {
@@ -82,80 +80,6 @@ export abstract class JiraClient {
      */
     fetchItemsLimit?: number;
   }): Promise<TOut[]>;
-
-  public getAnnotationFiltersFromEntity(
-    entity: Entity,
-    keys: JiraEntityFilters,
-    options?: { projectFallback?: string },
-  ): JiraEntityFilters {
-    const annotations = entity?.metadata?.annotations || {};
-    const projectValue =
-      annotations[keys.project] ??
-      (options?.projectFallback
-        ? annotations[options.projectFallback]
-        : undefined);
-
-    if (!projectValue) {
-      const requiredKeys = options?.projectFallback
-        ? `'${keys.project}' or '${options.projectFallback}'`
-        : `'${keys.project}'`;
-      throw new Error(
-        `Missing required ${requiredKeys} annotation for entity '${
-          entity.metadata?.name || 'unknown'
-        }'`,
-      );
-    }
-
-    const projectAnnotationKey = annotations[keys.project]
-      ? keys.project
-      : options?.projectFallback ?? keys.project;
-
-    const filters: JiraEntityFilters = {
-      project: `project = "${validateJQLValue(
-        sanitizeValue(projectValue),
-        projectAnnotationKey,
-      )}"`,
-    };
-
-    if (keys.component) {
-      const component = annotations[keys.component];
-      if (component) {
-        filters.component = `component = "${validateJQLValue(
-          sanitizeValue(component),
-          keys.component,
-        )}"`;
-      }
-    }
-
-    if (keys.label) {
-      const label = annotations[keys.label];
-      if (label) {
-        filters.label = `labels = "${validateJQLValue(
-          sanitizeValue(label),
-          keys.label,
-        )}"`;
-      }
-    }
-
-    if (keys.team) {
-      const team = annotations[keys.team];
-      if (team) {
-        filters.team = `team = ${validateIdentifier(
-          sanitizeValue(team),
-          keys.team,
-        )}`;
-      }
-    }
-
-    if (keys.customFilter) {
-      const customFilter = annotations[keys.customFilter];
-      if (customFilter) {
-        filters.customFilter = customFilter;
-      }
-    }
-
-    return filters;
-  }
 
   protected async getBaseUrl(): Promise<string> {
     const apiVersion = this.getApiVersion();

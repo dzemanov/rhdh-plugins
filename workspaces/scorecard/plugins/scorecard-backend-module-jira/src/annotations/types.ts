@@ -14,21 +14,23 @@
  * limitations under the License.
  */
 
-export type Product = 'datacenter' | 'cloud';
-
-export interface JiraIssue {
-  id: string;
-  createdAt: string;
-  resolutionAt: string | null;
+/** Maps filter slots to catalog annotation names (e.g. `jira/project-key`). */
+export interface JiraFilterAnnotations {
+  project: string;
+  component?: string;
+  label?: string;
+  team?: string;
+  customFilter?: string;
 }
 
-export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
-
-export type Header = Record<string, string> | {};
-
-export interface RequestOptions {
-  url: string;
-  method: Method;
-  headers?: Header;
-  body?: string;
+/**
+ * Per-slot JQL clause strings produced from entity annotations
+ * (e.g. `project: project = "FOO"`).
+ */
+export interface JiraJqlFilters {
+  project: string;
+  component?: string;
+  label?: string;
+  team?: string;
+  customFilter?: string;
 }

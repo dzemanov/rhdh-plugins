@@ -24,11 +24,11 @@ import { JiraClient } from '../clients/base';
 import { JiraOpenIssuesProvider } from './JiraOpenIssuesProvider';
 import { Entity } from '@backstage/catalog-model';
 
-const { PROJECT_KEY } = ScorecardJiraAnnotations;
+const { PROJECT_KEY, COMPONENT, LABEL, TEAM, CUSTOM_FILTER } =
+  ScorecardJiraAnnotations;
 
 describe('JiraOpenIssuesProvider', () => {
   const mockJiraClient = {
-    getAnnotationFiltersFromEntity: jest.fn(),
     getCountOpenIssues: jest.fn(),
   } as unknown as jest.Mocked<JiraClient>;
 
@@ -38,9 +38,6 @@ describe('JiraOpenIssuesProvider', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
-      project: 'project = "TEST"',
-    });
     provider = JiraOpenIssuesProvider.fromConfig(
       newMockRootConfig(),
       mockJiraClient,
@@ -185,14 +182,14 @@ describe('JiraOpenIssuesProvider', () => {
     });
 
     it('should include entity annotation filters without custom-filter with default mandatory filter', async () => {
-      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
-        project: 'project = "TEST"',
-        component: 'component = "backend"',
-        label: 'labels = "critical"',
-        team: 'team = 4316',
+      const entity = newEntityComponent({
+        [PROJECT_KEY]: 'TEST',
+        [COMPONENT]: 'backend',
+        [LABEL]: 'critical',
+        [TEAM]: '4316',
       });
 
-      await provider.calculateMetrics(mockEntity);
+      await provider.calculateMetrics(entity);
 
       expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
         '(project = "TEST") AND (component = "backend") AND (labels = "critical") AND (team = 4316) AND (type = Bug AND resolution = Unresolved)',
@@ -209,12 +206,13 @@ describe('JiraOpenIssuesProvider', () => {
         }),
         mockJiraClient,
       );
-      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
-        project: 'project = "TEST"',
-        customFilter: 'assignee = fromAnnotation',
-      });
 
-      await provider.calculateMetrics(mockEntity);
+      await provider.calculateMetrics(
+        newEntityComponent({
+          [PROJECT_KEY]: 'TEST',
+          [CUSTOM_FILTER]: 'assignee = fromAnnotation',
+        }),
+      );
 
       expect(mockJiraClient.getCountOpenIssues).toHaveBeenCalledWith(
         '(project = "TEST") AND (assignee = fromAnnotation) AND (resolution = Unresolved)',

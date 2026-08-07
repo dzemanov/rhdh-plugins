@@ -15,8 +15,10 @@
  */
 
 import type { Entity } from '@backstage/catalog-model';
-import { ScorecardJiraIncidentAnnotations } from '../annotations';
-import type { JiraEntityFilters } from '../clients/types';
+import {
+  ScorecardJiraIncidentAnnotations,
+  type JiraJqlFilters,
+} from '../annotations';
 import {
   joinJqlClauses,
   sanitizeValue,
@@ -28,7 +30,7 @@ import { DEFAULT_INCIDENT_ISSUE_TYPE } from '../constants';
 const { INCIDENT_ISSUE_TYPE } = ScorecardJiraIncidentAnnotations;
 
 export function buildIncidentJql(
-  filters: JiraEntityFilters,
+  filters: JiraJqlFilters,
   options: {
     from: string;
     to: string;

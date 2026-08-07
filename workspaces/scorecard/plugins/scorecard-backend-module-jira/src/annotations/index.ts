@@ -14,21 +14,11 @@
  * limitations under the License.
  */
 
-export type Product = 'datacenter' | 'cloud';
-
-export interface JiraIssue {
-  id: string;
-  createdAt: string;
-  resolutionAt: string | null;
-}
-
-export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
-
-export type Header = Record<string, string> | {};
-
-export interface RequestOptions {
-  url: string;
-  method: Method;
-  headers?: Header;
-  body?: string;
-}
+export type { JiraFilterAnnotations, JiraJqlFilters } from './types';
+export {
+  ScorecardJiraAnnotations,
+  ScorecardJiraIncidentAnnotations,
+  OPEN_ISSUES_FILTER_ANNOTATIONS,
+  INCIDENT_FILTER_ANNOTATIONS,
+} from './annotationKeys';
+export { buildJqlFiltersFromEntity } from './buildJqlFiltersFromEntity';

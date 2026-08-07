@@ -26,12 +26,15 @@ import { JiraClient } from '../clients/base';
 import { JiraIncidentsCollector } from './JiraIncidentsCollector';
 
 const { PROJECT_KEY } = ScorecardJiraAnnotations;
-const { INCIDENT_PROJECT_KEY, INCIDENT_ISSUE_TYPE } =
-  ScorecardJiraIncidentAnnotations;
+const {
+  INCIDENT_PROJECT_KEY,
+  INCIDENT_COMPONENT,
+  INCIDENT_LABEL,
+  INCIDENT_ISSUE_TYPE,
+} = ScorecardJiraIncidentAnnotations;
 
 describe('JiraIncidentsCollector', () => {
   const mockJiraClient = {
-    getAnnotationFiltersFromEntity: jest.fn(),
     getIssues: jest.fn(),
   } as unknown as jest.Mocked<JiraClient>;
 
@@ -56,9 +59,6 @@ describe('JiraIncidentsCollector', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
-      project: 'project = "INC"',
-    });
     mockJiraClient.getIssues.mockResolvedValue(defaultIncidents);
     collector = JiraIncidentsCollector.fromConfig(
       newMockRootConfig(),
@@ -131,13 +131,14 @@ describe('JiraIncidentsCollector', () => {
     });
 
     it('should include entity annotation filters with default issue type', async () => {
-      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
-        project: 'project = "INC"',
-        component: 'component = "Payments"',
-        label: 'labels = "sev-1"',
+      await collector.collect({
+        entity: newEntityComponent({
+          [INCIDENT_PROJECT_KEY]: 'INC',
+          [INCIDENT_COMPONENT]: 'Payments',
+          [INCIDENT_LABEL]: 'sev-1',
+        }),
+        input,
       });
-
-      await collector.collect({ entity: mockEntity, input });
 
       expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         '(project = "INC") AND (component = "Payments") AND (labels = "sev-1") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
@@ -151,12 +152,14 @@ describe('JiraIncidentsCollector', () => {
         }),
         mockJiraClient,
       );
-      mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
-        project: 'project = "INC"',
-        component: 'component = "Payments"',
-      });
 
-      await collector.collect({ entity: mockEntity, input });
+      await collector.collect({
+        entity: newEntityComponent({
+          [INCIDENT_PROJECT_KEY]: 'INC',
+          [INCIDENT_COMPONENT]: 'Payments',
+        }),
+        input,
+      });
 
       expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         '(project = "INC") AND (component = "Payments") AND (type = "ServiceIncident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
@@ -187,17 +190,15 @@ describe('JiraIncidentsCollector', () => {
       );
     });
 
-    it('should pass projectFallback when resolving annotation filters', async () => {
+    it('should fall back to project-key when incident project key is missing', async () => {
       await collector.collect({
         entity: newEntityComponent({ [PROJECT_KEY]: 'PROJ' }),
         input,
       });
 
-      expect(
-        mockJiraClient.getAnnotationFiltersFromEntity,
-      ).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
-        projectFallback: PROJECT_KEY,
-      });
+      expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
+        expect.stringContaining('(project = "PROJ")'),
+      );
     });
   });
 });

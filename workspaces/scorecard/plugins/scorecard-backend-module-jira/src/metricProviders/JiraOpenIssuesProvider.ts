@@ -23,8 +23,9 @@ import {
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { MetricProvider } from '@red-hat-developer-hub/backstage-plugin-scorecard-node';
 import {
+  buildJqlFiltersFromEntity,
+  OPEN_ISSUES_FILTER_ANNOTATIONS,
   ScorecardJiraAnnotations,
-  openIssuesAnnotationFilters,
 } from '../annotations';
 import { JiraClient } from '../clients/base';
 import {
@@ -87,9 +88,9 @@ export class JiraOpenIssuesProvider implements MetricProvider<'number'> {
   }
 
   async calculateMetrics(entity: Entity): Promise<Map<string, number>> {
-    const entityFilters = this.jiraClient.getAnnotationFiltersFromEntity(
+    const entityFilters = buildJqlFiltersFromEntity(
       entity,
-      openIssuesAnnotationFilters,
+      OPEN_ISSUES_FILTER_ANNOTATIONS,
     );
     const jql = buildOpenIssuesJql(entityFilters, this.options);
     const value = await this.jiraClient.getCountOpenIssues(jql);

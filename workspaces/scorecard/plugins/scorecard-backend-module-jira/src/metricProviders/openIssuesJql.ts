@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import type { JiraEntityFilters } from '../clients/types';
+import type { JiraJqlFilters } from '../annotations';
 import { joinJqlClauses } from '../clients/utils';
 import { JIRA_MANDATORY_FILTER } from '../constants';
 import type { JiraOpenIssuesOptions } from './JiraOpenIssuesConfig';
 
 export function buildOpenIssuesJql(
-  entityFilters: JiraEntityFilters,
+  entityFilters: JiraJqlFilters,
   configOptions: JiraOpenIssuesOptions,
 ): string {
   const { customFilter: annotationCustomFilter } = entityFilters;

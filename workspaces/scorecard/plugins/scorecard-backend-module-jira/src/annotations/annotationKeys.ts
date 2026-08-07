@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { JiraFilterAnnotations } from './types';
+
 export enum ScorecardJiraAnnotations {
   PROJECT_KEY = 'jira/project-key',
   COMPONENT = 'jira/component',
@@ -25,7 +27,7 @@ export enum ScorecardJiraAnnotations {
 /**
  * Annotations used by the `jira:incidents` collector.
  * `INCIDENT_PROJECT_KEY` falls back to {@link ScorecardJiraAnnotations.PROJECT_KEY}.
- * Component, label, team, custom-filter, and issue-type are incident-specific (no fallback).
+ * Component, label, team, and custom-filter are incident-specific (no fallback).
  * `INCIDENT_ISSUE_TYPE` overrides app-config
  * `scorecard.plugins.jira.collectors.incidents.options.issueType`
  * when set; otherwise the app-config value or default `Incident` is used.
@@ -39,18 +41,26 @@ export enum ScorecardJiraIncidentAnnotations {
   INCIDENT_ISSUE_TYPE = 'jira/incident-issue-type',
 }
 
-export const openIssuesAnnotationFilters = {
+/**
+ * Maps open-issues JQL filter slots to {@link ScorecardJiraAnnotations}.
+ */
+export const OPEN_ISSUES_FILTER_ANNOTATIONS: JiraFilterAnnotations = {
   project: ScorecardJiraAnnotations.PROJECT_KEY,
   component: ScorecardJiraAnnotations.COMPONENT,
   label: ScorecardJiraAnnotations.LABEL,
   team: ScorecardJiraAnnotations.TEAM,
   customFilter: ScorecardJiraAnnotations.CUSTOM_FILTER,
-} as const;
+};
 
-export const incidentAnnotationFilters = {
+/**
+ * Maps incident JQL filter slots to {@link ScorecardJiraIncidentAnnotations}
+ * (except {@link ScorecardJiraIncidentAnnotations.INCIDENT_ISSUE_TYPE}, which
+ * is resolved by incident JQL).
+ */
+export const INCIDENT_FILTER_ANNOTATIONS: JiraFilterAnnotations = {
   project: ScorecardJiraIncidentAnnotations.INCIDENT_PROJECT_KEY,
   component: ScorecardJiraIncidentAnnotations.INCIDENT_COMPONENT,
   label: ScorecardJiraIncidentAnnotations.INCIDENT_LABEL,
   team: ScorecardJiraIncidentAnnotations.INCIDENT_TEAM,
   customFilter: ScorecardJiraIncidentAnnotations.INCIDENT_CUSTOM_FILTER,
-} as const;
+};

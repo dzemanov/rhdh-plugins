@@ -114,7 +114,7 @@ export class JiraDataCenterClientStrategy extends JiraClient {
     return DATA_CENTER_API_VERSION;
   }
 
-  public async getIncidentIssues(jql: string): Promise<JiraIssue[]> {
+  public async getIssues(jql: string): Promise<JiraIssue[]> {
     const baseUrl = await this.getBaseUrl();
     return this.sendPaginatedRequest({
       url: `${baseUrl}/search`,

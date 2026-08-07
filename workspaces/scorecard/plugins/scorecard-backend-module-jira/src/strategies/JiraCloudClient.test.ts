@@ -268,7 +268,7 @@ describe('JiraCloudClient', () => {
     });
   });
 
-  describe('getIncidentIssues', () => {
+  describe('getIssues', () => {
     it('should return mapped Jira issues from /search/jql', async () => {
       (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -286,7 +286,7 @@ describe('JiraCloudClient', () => {
         }),
       });
 
-      const issues = await jiraCloudClient.getIncidentIssues(
+      const issues = await jiraCloudClient.getIssues(
         '(project = "INC") AND (type = "Incident")',
       );
       const requestUrl = (globalThis.fetch as jest.Mock).mock.calls[0][0];

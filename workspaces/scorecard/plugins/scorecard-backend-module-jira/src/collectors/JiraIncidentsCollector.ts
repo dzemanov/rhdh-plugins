@@ -100,7 +100,7 @@ export class JiraIncidentsCollector
       },
       options.entity,
     );
-    const incidents = await this.jiraClient.getIncidentIssues(jql);
+    const incidents = await this.jiraClient.getIssues(jql);
 
     return {
       incidents,

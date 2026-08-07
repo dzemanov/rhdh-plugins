@@ -55,7 +55,7 @@ class TestJiraClient extends JiraClient {
     return 3;
   }
 
-  public getIncidentIssues(_jql: string): Promise<JiraIssue[]> {
+  public getIssues(_jql: string): Promise<JiraIssue[]> {
     throw new Error('Method not implemented.');
   }
 

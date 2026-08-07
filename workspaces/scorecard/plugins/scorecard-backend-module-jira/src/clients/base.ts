@@ -36,7 +36,7 @@ export abstract class JiraClient {
 
   protected abstract getApiVersion(): number;
 
-  public abstract getIncidentIssues(jql: string): Promise<JiraIssue[]>;
+  public abstract getIssues(jql: string): Promise<JiraIssue[]>;
 
   protected async sendRequest({
     url,

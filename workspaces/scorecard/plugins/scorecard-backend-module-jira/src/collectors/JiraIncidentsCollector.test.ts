@@ -32,7 +32,7 @@ const { INCIDENT_PROJECT_KEY, INCIDENT_ISSUE_TYPE } =
 describe('JiraIncidentsCollector', () => {
   const mockJiraClient = {
     getAnnotationFiltersFromEntity: jest.fn(),
-    getIncidentIssues: jest.fn(),
+    getIssues: jest.fn(),
   } as unknown as jest.Mocked<JiraClient>;
 
   let collector: JiraIncidentsCollector;
@@ -59,7 +59,7 @@ describe('JiraIncidentsCollector', () => {
     mockJiraClient.getAnnotationFiltersFromEntity.mockReturnValue({
       project: 'project = "INC"',
     });
-    mockJiraClient.getIncidentIssues.mockResolvedValue(defaultIncidents);
+    mockJiraClient.getIssues.mockResolvedValue(defaultIncidents);
     collector = JiraIncidentsCollector.fromConfig(
       newMockRootConfig(),
       mockJiraClient,
@@ -100,9 +100,7 @@ describe('JiraIncidentsCollector', () => {
     });
 
     it('should propagate errors from Jira client', async () => {
-      mockJiraClient.getIncidentIssues.mockRejectedValue(
-        new Error('Jira API error'),
-      );
+      mockJiraClient.getIssues.mockRejectedValue(new Error('Jira API error'));
 
       await expect(
         collector.collect({ entity: mockEntity, input }),
@@ -112,7 +110,7 @@ describe('JiraIncidentsCollector', () => {
     it('should use default issue type when app-config options are unset', async () => {
       await collector.collect({ entity: mockEntity, input });
 
-      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+      expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         '(project = "INC") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
       );
     });
@@ -127,7 +125,7 @@ describe('JiraIncidentsCollector', () => {
 
       await collector.collect({ entity: mockEntity, input });
 
-      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+      expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         '(project = "INC") AND (type = "ServiceIncident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
       );
     });
@@ -141,7 +139,7 @@ describe('JiraIncidentsCollector', () => {
 
       await collector.collect({ entity: mockEntity, input });
 
-      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+      expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         '(project = "INC") AND (component = "Payments") AND (labels = "sev-1") AND (type = "Incident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
       );
     });
@@ -160,7 +158,7 @@ describe('JiraIncidentsCollector', () => {
 
       await collector.collect({ entity: mockEntity, input });
 
-      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+      expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         '(project = "INC") AND (component = "Payments") AND (type = "ServiceIncident") AND (created >= "2026-06-01 00:00") AND (created <= "2026-06-30 23:59")',
       );
     });
@@ -181,10 +179,10 @@ describe('JiraIncidentsCollector', () => {
         input,
       });
 
-      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+      expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         expect.stringContaining('(type = "ProductionIncident")'),
       );
-      expect(mockJiraClient.getIncidentIssues).toHaveBeenCalledWith(
+      expect(mockJiraClient.getIssues).toHaveBeenCalledWith(
         expect.not.stringContaining('(type = "ServiceIncident")'),
       );
     });

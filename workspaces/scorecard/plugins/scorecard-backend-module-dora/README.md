@@ -131,7 +131,7 @@ scorecard:
       deploymentFrequency:
         options:
           productionEnvironments: [production, prod]
-        collectors:
+          collectors:
           deployments:
             id: customDatasource:deployments
             input:

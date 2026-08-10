@@ -59,10 +59,10 @@ export class JiraIncidentsCollector
 
   static fromConfig(
     config: Config,
-    jiraClient: JiraClient,
+    options: { jiraClient: JiraClient },
   ): JiraIncidentsCollector {
     return new JiraIncidentsCollector(
-      jiraClient,
+      options.jiraClient,
       parseJiraIncidentsConfigOptions(config),
     );
   }

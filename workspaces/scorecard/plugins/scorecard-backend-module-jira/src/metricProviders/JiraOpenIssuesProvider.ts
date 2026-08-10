@@ -47,10 +47,10 @@ export class JiraOpenIssuesProvider implements MetricProvider<'number'> {
 
   static fromConfig(
     config: Config,
-    jiraClient: JiraClient,
+    options: { jiraClient: JiraClient },
   ): JiraOpenIssuesProvider {
     return new JiraOpenIssuesProvider(
-      jiraClient,
+      options.jiraClient,
       parseJiraOpenIssuesConfigOptions(config),
     );
   }

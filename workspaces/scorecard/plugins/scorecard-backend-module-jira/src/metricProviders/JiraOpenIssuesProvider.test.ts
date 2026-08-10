@@ -38,10 +38,9 @@ describe('JiraOpenIssuesProvider', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    provider = JiraOpenIssuesProvider.fromConfig(
-      newMockRootConfig(),
-      mockJiraClient,
-    );
+    provider = JiraOpenIssuesProvider.fromConfig(newMockRootConfig(), {
+      jiraClient: mockJiraClient,
+    });
   });
 
   describe('getProviderDatasourceId', () => {
@@ -94,7 +93,7 @@ describe('JiraOpenIssuesProvider', () => {
             customFilter: 'priority = High',
           },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       expect((provider as any).options).toEqual({
@@ -104,10 +103,9 @@ describe('JiraOpenIssuesProvider', () => {
     });
 
     it('should leave empty options if not set in app-config', () => {
-      provider = JiraOpenIssuesProvider.fromConfig(
-        newMockRootConfig({}),
-        mockJiraClient,
-      );
+      provider = JiraOpenIssuesProvider.fromConfig(newMockRootConfig({}), {
+        jiraClient: mockJiraClient,
+      });
 
       expect((provider as any).options).toEqual({
         mandatoryFilter: undefined,
@@ -153,7 +151,7 @@ describe('JiraOpenIssuesProvider', () => {
             mandatoryFilter: 'type = Task AND resolution = Resolved',
           },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       await provider.calculateMetrics(mockEntity);
@@ -171,7 +169,7 @@ describe('JiraOpenIssuesProvider', () => {
             customFilter: 'assignee = testerUser',
           },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       await provider.calculateMetrics(mockEntity);
@@ -204,7 +202,7 @@ describe('JiraOpenIssuesProvider', () => {
             customFilter: 'assignee = fromConfig',
           },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       await provider.calculateMetrics(

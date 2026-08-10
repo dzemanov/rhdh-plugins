@@ -60,10 +60,9 @@ describe('JiraIncidentsCollector', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockJiraClient.getIssues.mockResolvedValue(defaultIncidents);
-    collector = JiraIncidentsCollector.fromConfig(
-      newMockRootConfig(),
-      mockJiraClient,
-    );
+    collector = JiraIncidentsCollector.fromConfig(newMockRootConfig(), {
+      jiraClient: mockJiraClient,
+    });
   });
 
   describe('fromConfig', () => {
@@ -72,7 +71,7 @@ describe('JiraIncidentsCollector', () => {
         newMockRootConfig({
           incidentOptions: { issueType: 'ServiceIncident' },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       expect((collector as any).incidentOptions).toEqual({
@@ -81,10 +80,9 @@ describe('JiraIncidentsCollector', () => {
     });
 
     it('should leave empty options if not set in app-config', () => {
-      collector = JiraIncidentsCollector.fromConfig(
-        newMockRootConfig({}),
-        mockJiraClient,
-      );
+      collector = JiraIncidentsCollector.fromConfig(newMockRootConfig({}), {
+        jiraClient: mockJiraClient,
+      });
 
       expect((collector as any).incidentOptions).toEqual({
         issueType: undefined,
@@ -120,7 +118,7 @@ describe('JiraIncidentsCollector', () => {
         newMockRootConfig({
           incidentOptions: { issueType: 'ServiceIncident' },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       await collector.collect({ entity: mockEntity, input });
@@ -150,7 +148,7 @@ describe('JiraIncidentsCollector', () => {
         newMockRootConfig({
           incidentOptions: { issueType: 'ServiceIncident' },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       await collector.collect({
@@ -171,7 +169,7 @@ describe('JiraIncidentsCollector', () => {
         newMockRootConfig({
           incidentOptions: { issueType: 'ServiceIncident' },
         }),
-        mockJiraClient,
+        { jiraClient: mockJiraClient },
       );
 
       await collector.collect({

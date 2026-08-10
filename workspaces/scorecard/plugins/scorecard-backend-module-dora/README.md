@@ -132,11 +132,11 @@ scorecard:
         options:
           productionEnvironments: [production, prod]
           collectors:
-           deployments:
-            id: customDatasource:deployments
-            input:
-              # merged with generated from/to window
-              # your collector-specific options
+            deployments:
+              id: customDatasource:deployments
+              input:
+                # merged with generated from/to window
+                # your collector-specific options
       medianLeadTimeForChanges:
         options:
           productionEnvironments: [production, prod]

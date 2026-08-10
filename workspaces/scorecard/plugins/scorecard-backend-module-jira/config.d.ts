@@ -38,6 +38,18 @@ export interface Config {
     plugins?: {
       /** JIRA datasource configuration */
       jira?: {
+        collectors?: {
+          incidents?: {
+            options?: {
+              /**
+               * Jira issue type used by the `jira:incidents` collector.
+               * Defaults to `Incident`. Overridden by entity annotation
+               * `jira/incident-issue-type` when set.
+               */
+              issueType?: string;
+            };
+          };
+        };
         openIssues?: {
           options?: {
             mandatoryFilter?: string;

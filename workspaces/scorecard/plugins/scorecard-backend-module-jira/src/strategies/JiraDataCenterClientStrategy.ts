@@ -75,15 +75,24 @@ export class JiraDataCenterClientStrategy extends JiraClient {
 
       const remaining = fetchItemsLimit - results.length;
       const mapped = options.mapper(page);
+      const nextStartAt = paging.startAt + paging.maxResults;
+      const hasMorePagesAvailable =
+        paging.maxResults > 0 && nextStartAt < paging.total;
+
       if (mapped.length >= remaining) {
         results.push(...mapped.slice(0, remaining));
+        if (mapped.length > remaining || hasMorePagesAvailable) {
+          this.logger.warn(
+            `Reached fetchItemsLimit of ${fetchItemsLimit} for Jira request to ${options.url}; stopping fetch`,
+          );
+        }
         break;
-      } else {
-        results.push(...mapped);
       }
 
-      startAt = paging.startAt + paging.maxResults;
-      hasMorePages = paging.maxResults > 0 && startAt < paging.total;
+      results.push(...mapped);
+
+      startAt = nextStartAt;
+      hasMorePages = hasMorePagesAvailable;
     }
 
     return results;

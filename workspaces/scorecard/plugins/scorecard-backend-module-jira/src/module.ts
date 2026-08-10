@@ -35,12 +35,14 @@ export const scorecardModuleJira = createBackendModule({
         collectors: scorecardCollectorsExtensionPoint,
         config: coreServices.rootConfig,
         discovery: coreServices.discovery,
+        logger: coreServices.logger,
         metrics: scorecardMetricsExtensionPoint,
       },
-      async init({ auth, collectors, config, discovery, metrics }) {
+      async init({ auth, collectors, config, discovery, logger, metrics }) {
         const jiraClient = JiraClientFactory.fromConfig(config, {
           auth,
           discovery,
+          logger,
         });
         collectors.addCollector(
           JiraIncidentsCollector.fromConfig(config, { jiraClient }),

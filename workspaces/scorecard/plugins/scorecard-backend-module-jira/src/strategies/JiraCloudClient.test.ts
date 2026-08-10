@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { mockServices } from '@backstage/backend-test-utils';
 import { z } from 'zod';
 import { JiraCloudClientStrategy } from './JiraCloudClientStrategy';
 
@@ -28,9 +29,13 @@ const mockConnectionStrategy = {
 
 describe('JiraCloudClient', () => {
   let jiraCloudClient: JiraCloudClientStrategy;
+  const mockedLogger = mockServices.logger.mock();
 
   beforeEach(() => {
-    jiraCloudClient = new JiraCloudClientStrategy(mockConnectionStrategy);
+    jiraCloudClient = new JiraCloudClientStrategy(
+      mockConnectionStrategy,
+      mockedLogger,
+    );
   });
 
   afterEach(() => {
@@ -196,6 +201,9 @@ describe('JiraCloudClient', () => {
 
       expect(results).toEqual(['a', 'b']);
       expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 2 for Jira request to https://example.com/api/rest/api/3/search/jql; stopping fetch',
+      );
     });
 
     it('should slice the last page when it exceeds remaining fetchItemsLimit', async () => {
@@ -226,6 +234,34 @@ describe('JiraCloudClient', () => {
 
       expect(results).toEqual(['a', 'b', 'c']);
       expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 3 for Jira request to https://example.com/api/rest/api/3/search/jql; stopping fetch',
+      );
+    });
+
+    it('should warn when fetchItemsLimit truncates the last page', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({
+          items: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+          isLast: true,
+        }),
+      });
+
+      const results = await jiraCloudClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/3/search/jql',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+        fetchItemsLimit: 2,
+      });
+
+      expect(results).toEqual(['a', 'b']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 2 for Jira request to https://example.com/api/rest/api/3/search/jql; stopping fetch',
+      );
     });
 
     it('should throw when response does not match schema', async () => {

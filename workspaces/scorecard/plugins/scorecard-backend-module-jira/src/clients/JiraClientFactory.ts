@@ -18,6 +18,7 @@ import type { Config } from '@backstage/config';
 import type {
   AuthService,
   DiscoveryService,
+  LoggerService,
 } from '@backstage/backend-plugin-api';
 import { JIRA_CONFIG_PATH } from '../constants';
 import { JiraClient } from '../clients/base';
@@ -36,6 +37,7 @@ export class JiraClientFactory {
     options: {
       auth: AuthService;
       discovery: DiscoveryService;
+      logger: LoggerService;
     },
   ): JiraClient {
     const jiraConfig = config.getConfig(JIRA_CONFIG_PATH);
@@ -60,9 +62,12 @@ export class JiraClientFactory {
 
     switch (product) {
       case 'datacenter':
-        return new JiraDataCenterClientStrategy(connectionStrategy);
+        return new JiraDataCenterClientStrategy(
+          connectionStrategy,
+          options.logger,
+        );
       case 'cloud':
-        return new JiraCloudClientStrategy(connectionStrategy);
+        return new JiraCloudClientStrategy(connectionStrategy, options.logger);
       default:
         throw new Error(
           `Invalid Jira product: ${product}. Valid products for 'jira.product' are: datacenter, cloud`,

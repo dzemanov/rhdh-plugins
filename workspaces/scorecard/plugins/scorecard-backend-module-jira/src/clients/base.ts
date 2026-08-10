@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { LoggerService } from '@backstage/backend-plugin-api';
 import type { JsonObject } from '@backstage/types';
 import type { z } from 'zod';
 import { JiraIssue, Method, RequestOptions } from './types';
@@ -21,9 +22,11 @@ import { ConnectionStrategy } from '../strategies/ConnectionStrategy';
 
 export abstract class JiraClient {
   protected readonly connectionStrategy: ConnectionStrategy;
+  protected readonly logger: LoggerService;
 
-  constructor(connectionStrategy: ConnectionStrategy) {
+  constructor(connectionStrategy: ConnectionStrategy, logger: LoggerService) {
     this.connectionStrategy = connectionStrategy;
+    this.logger = logger;
   }
 
   protected abstract getSearchCountEndpoint(): string;

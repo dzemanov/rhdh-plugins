@@ -43,6 +43,7 @@ describe('JiraClientFactory', () => {
   const factoryOptions = {
     auth: mockServices.auth(),
     discovery: mockServices.discovery(),
+    logger: mockServices.logger.mock(),
   };
 
   afterEach(() => {
@@ -97,6 +98,7 @@ describe('JiraClientFactory', () => {
       );
       expect(JiraDataCenterClientStrategy).toHaveBeenCalledWith(
         mockedDirectConnectionStrategy.mock.instances[0],
+        factoryOptions.logger,
       );
     });
 
@@ -114,6 +116,7 @@ describe('JiraClientFactory', () => {
       );
       expect(JiraDataCenterClientStrategy).toHaveBeenCalledWith(
         mockedProxyConnectionStrategy.mock.instances[0],
+        factoryOptions.logger,
       );
     });
 
@@ -132,6 +135,7 @@ describe('JiraClientFactory', () => {
       );
       expect(JiraCloudClientStrategy).toHaveBeenCalledWith(
         mockedDirectConnectionStrategy.mock.instances[0],
+        factoryOptions.logger,
       );
     });
 
@@ -150,6 +154,7 @@ describe('JiraClientFactory', () => {
       );
       expect(JiraCloudClientStrategy).toHaveBeenCalledWith(
         mockedProxyConnectionStrategy.mock.instances[0],
+        factoryOptions.logger,
       );
     });
 

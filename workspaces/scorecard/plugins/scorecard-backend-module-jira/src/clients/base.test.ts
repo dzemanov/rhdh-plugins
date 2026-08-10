@@ -15,6 +15,7 @@
  */
 
 import type { ConnectionStrategy } from '../strategies/ConnectionStrategy';
+import { mockServices } from '@backstage/backend-test-utils';
 import { JiraClient } from './base';
 import type { JiraIssue, Method } from './types';
 import { JsonObject } from '@backstage/types';
@@ -58,6 +59,7 @@ globalThis.fetch = jest.fn();
 describe('JiraClient', () => {
   let testJiraClient: TestJiraClient;
   let mockConnectionStrategy: ConnectionStrategy;
+  const mockedLogger = mockServices.logger.mock();
 
   const mockMethod = 'GET';
   const mockURL = 'https://example.com/api';
@@ -78,7 +80,7 @@ describe('JiraClient', () => {
         .mockResolvedValue({ Authorization: 'Basic dummyToken' }),
     };
 
-    testJiraClient = new TestJiraClient(mockConnectionStrategy);
+    testJiraClient = new TestJiraClient(mockConnectionStrategy, mockedLogger);
   });
 
   afterEach(() => {
@@ -91,7 +93,7 @@ describe('JiraClient', () => {
     });
 
     it('should have connection strategy', () => {
-      const client = new TestJiraClient(mockConnectionStrategy);
+      const client = new TestJiraClient(mockConnectionStrategy, mockedLogger);
 
       expect((client as any).connectionStrategy).toBe(mockConnectionStrategy);
     });

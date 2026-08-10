@@ -74,15 +74,22 @@ export class JiraCloudClientStrategy extends JiraClient {
 
       const remaining = fetchItemsLimit - results.length;
       const mapped = options.mapper(page);
+      const token = paging.nextPageToken?.trim();
+      const hasMorePagesAvailable = Boolean(token) && paging.isLast !== true;
+
       if (mapped.length >= remaining) {
         results.push(...mapped.slice(0, remaining));
+        if (mapped.length > remaining || hasMorePagesAvailable) {
+          this.logger.warn(
+            `Reached fetchItemsLimit of ${fetchItemsLimit} for Jira request to ${options.url}; stopping fetch`,
+          );
+        }
         break;
-      } else {
-        results.push(...mapped);
       }
 
-      const token = paging.nextPageToken?.trim();
-      if (paging.isLast === true || !token) {
+      results.push(...mapped);
+
+      if (!hasMorePagesAvailable) {
         hasMorePages = false;
       } else {
         nextPageToken = token;

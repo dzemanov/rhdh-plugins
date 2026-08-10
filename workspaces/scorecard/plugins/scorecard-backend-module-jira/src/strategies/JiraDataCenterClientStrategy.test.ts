@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { mockServices } from '@backstage/backend-test-utils';
 import { z } from 'zod';
 import { JiraDataCenterClientStrategy } from './JiraDataCenterClientStrategy';
 
@@ -28,10 +29,12 @@ const mockConnectionStrategy = {
 
 describe('JiraDataCenterClient', () => {
   let jiraDataCenterClient: JiraDataCenterClientStrategy;
+  const mockedLogger = mockServices.logger.mock();
 
   beforeEach(() => {
     jiraDataCenterClient = new JiraDataCenterClientStrategy(
       mockConnectionStrategy,
+      mockedLogger,
     );
   });
 
@@ -204,6 +207,9 @@ describe('JiraDataCenterClient', () => {
 
       expect(results).toEqual(['a', 'b']);
       expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 2 for Jira request to https://example.com/api/rest/api/2/search; stopping fetch',
+      );
     });
 
     it('should slice the last page when it exceeds remaining fetchItemsLimit', async () => {
@@ -238,6 +244,36 @@ describe('JiraDataCenterClient', () => {
 
       expect(results).toEqual(['a', 'b', 'c']);
       expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 3 for Jira request to https://example.com/api/rest/api/2/search; stopping fetch',
+      );
+    });
+
+    it('should warn when fetchItemsLimit truncates the last page', async () => {
+      (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValueOnce({
+          startAt: 0,
+          maxResults: 3,
+          total: 3,
+          items: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+        }),
+      });
+
+      const results = await jiraDataCenterClient.sendPaginatedRequest({
+        url: 'https://example.com/api/rest/api/2/search',
+        method: 'POST',
+        body: { jql: 'project = "INC"' },
+        responseSchema,
+        mapper: page => page.items.map(item => item.id),
+        fetchItemsLimit: 2,
+      });
+
+      expect(results).toEqual(['a', 'b']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 2 for Jira request to https://example.com/api/rest/api/2/search; stopping fetch',
+      );
     });
 
     it('should throw when paging fields are missing', async () => {

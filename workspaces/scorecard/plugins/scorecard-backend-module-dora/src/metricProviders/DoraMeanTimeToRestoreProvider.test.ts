@@ -63,7 +63,7 @@ describe('DoraMeanTimeToRestoreProvider', () => {
       expect(metrics[0].thresholds).toEqual(
         DEFAULT_DORA_MEAN_TIME_TO_RESTORE_THRESHOLDS,
       );
-      expect(metrics[0].defaultVisualization).toBe('graph');
+      expect(metrics[0].defaultVisualization).toBe('sparkline');
     });
   });
 

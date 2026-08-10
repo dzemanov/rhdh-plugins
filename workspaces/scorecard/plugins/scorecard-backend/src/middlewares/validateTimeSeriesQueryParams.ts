@@ -18,13 +18,6 @@ import { z } from 'zod';
 import { InputError } from '@backstage/errors';
 import type { Request, Response, NextFunction } from 'express';
 
-const isoDateString = z
-  .string()
-  .min(1)
-  .refine(value => !Number.isNaN(Date.parse(value)), {
-    message: 'Must be a valid ISO-8601 date',
-  });
-
 export function validateTimeSeriesQueryParams(
   req: Request,
   _res: Response,
@@ -33,8 +26,8 @@ export function validateTimeSeriesQueryParams(
   const schema = z
     .object({
       metricId: z.string().min(1).max(255),
-      from: isoDateString,
-      to: isoDateString,
+      from: z.string().datetime(),
+      to: z.string().datetime(),
     })
     .refine(data => new Date(data.from) <= new Date(data.to), {
       message: 'from must be less than or equal to to',

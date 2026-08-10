@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import type { LoggerService } from '@backstage/backend-plugin-api';
 import type { Config } from '@backstage/config';
 import {
   DefaultGithubCredentialsProvider,
@@ -38,11 +39,13 @@ import { mapCommitsPullRequests } from './mappers';
 export class GithubClient {
   private readonly integrations: ScmIntegrations;
   private readonly credentialsProvider: DefaultGithubCredentialsProvider;
+  private readonly logger: LoggerService;
 
-  constructor(config: Config) {
+  constructor(config: Config, logger: LoggerService) {
     this.integrations = ScmIntegrations.fromConfig(config);
     this.credentialsProvider =
       DefaultGithubCredentialsProvider.fromIntegrations(this.integrations);
+    this.logger = logger;
   }
 
   private async getOctokitClient(url: string): Promise<typeof graphql> {
@@ -175,8 +178,10 @@ export class GithubClient {
         break;
       }
 
+      let truncatedCurrentPage = false;
       for (const deployment of pageDeployments) {
         if (deployments.length >= fetchItemsLimit) {
+          truncatedCurrentPage = true;
           break;
         }
 
@@ -204,10 +209,22 @@ export class GithubClient {
         }
       }
 
+      const githubHasNextPage = Boolean(
+        response.repository.deployments?.pageInfo.hasNextPage,
+      );
+      if (
+        deployments.length >= fetchItemsLimit &&
+        (githubHasNextPage || truncatedCurrentPage)
+      ) {
+        this.logger.warn(
+          `Reached fetchItemsLimit of ${fetchItemsLimit} for deployments in ${repository.owner}/${repository.repo}; stopping fetch`,
+        );
+      }
+
       hasMorePages =
         deployments.length < fetchItemsLimit &&
         !reachedOlderThanWindow &&
-        Boolean(response.repository.deployments?.pageInfo.hasNextPage);
+        githubHasNextPage;
       after = response.repository.deployments?.pageInfo.endCursor ?? null;
     }
 

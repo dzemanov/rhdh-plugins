@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { mockServices } from '@backstage/backend-test-utils';
 import { ConfigReader } from '@backstage/config';
 import { DefaultGithubCredentialsProvider } from '@backstage/integration';
 import { GithubClient } from './GithubClient';
@@ -45,6 +46,7 @@ jest.mock('@octokit/rest', () => ({
 
 describe('GithubClient', () => {
   let githubClient: GithubClient;
+  const mockedLogger = mockServices.logger.mock();
   const mockedGraphqlClient = jest.fn();
   const repository: GithubRepository = {
     owner: 'owner',
@@ -79,7 +81,7 @@ describe('GithubClient', () => {
         ],
       },
     });
-    githubClient = new GithubClient(mockConfig);
+    githubClient = new GithubClient(mockConfig, mockedLogger);
   });
 
   describe('getOpenPullRequestsCount', () => {
@@ -260,6 +262,9 @@ describe('GithubClient', () => {
         },
       ]);
       expect(mockedGraphqlClient).toHaveBeenCalledTimes(1);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 2 for deployments in owner/repo; stopping fetch',
+      );
     });
 
     it('should take only remaining items when page exceeds fetchItemsLimit', async () => {
@@ -353,6 +358,77 @@ describe('GithubClient', () => {
         },
       ]);
       expect(mockedGraphqlClient).toHaveBeenCalledTimes(2);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 3 for deployments in owner/repo; stopping fetch',
+      );
+    });
+
+    it('should warn when fetchItemsLimit truncates the last page', async () => {
+      const url = `https://github.com/owner/repo`;
+      const from = new Date('2026-05-01T00:00:00.000Z');
+      const to = new Date('2026-05-31T23:59:59.000Z');
+
+      mockedGraphqlClient.mockResolvedValueOnce({
+        repository: {
+          deployments: {
+            nodes: [
+              {
+                databaseId: 103,
+                commitOid: 'sha-three',
+                createdAt: '2026-05-20T10:00:00.000Z',
+                environment: 'production',
+                latestStatus: { state: 'SUCCESS' },
+              },
+              {
+                databaseId: 102,
+                commitOid: 'sha-two',
+                createdAt: '2026-05-15T10:00:00.000Z',
+                environment: 'production',
+                latestStatus: { state: 'SUCCESS' },
+              },
+              {
+                databaseId: 101,
+                commitOid: 'sha-one',
+                createdAt: '2026-05-10T10:00:00.000Z',
+                environment: 'production',
+                latestStatus: { state: 'SUCCESS' },
+              },
+            ],
+            pageInfo: {
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      });
+
+      const deployments = await githubClient.getDeployments(
+        url,
+        repository,
+        from,
+        to,
+        { fetchItemsLimit: 2 },
+      );
+
+      expect(deployments).toEqual([
+        {
+          id: 102,
+          sha: 'sha-two',
+          createdAt: '2026-05-15T10:00:00.000Z',
+          environment: 'production',
+          status: 'SUCCESS',
+        },
+        {
+          id: 103,
+          sha: 'sha-three',
+          createdAt: '2026-05-20T10:00:00.000Z',
+          environment: 'production',
+          status: 'SUCCESS',
+        },
+      ]);
+      expect(mockedLogger.warn).toHaveBeenCalledWith(
+        'Reached fetchItemsLimit of 2 for deployments in owner/repo; stopping fetch',
+      );
     });
 
     it('should throw when repository is not found or inaccessible', async () => {

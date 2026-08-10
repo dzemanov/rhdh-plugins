@@ -55,7 +55,7 @@ describe('DoraDeploymentFrequencyProvider', () => {
       expect(metrics[0].thresholds).toEqual(
         DEFAULT_DORA_DEPLOYMENT_FREQUENCY_THRESHOLDS,
       );
-      expect(metrics[0].defaultVisualization).toBe('graph');
+      expect(metrics[0].defaultVisualization).toBe('sparkline');
     });
   });
 

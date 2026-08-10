@@ -128,7 +128,7 @@ export type Metric<T extends MetricType = MetricType> = {
 };
 
 // @public
-export type MetricDefaultVisualization = 'value' | 'graph';
+export type MetricDefaultVisualization = 'value' | 'sparkline';
 
 // @public (undocumented)
 export type MetricResult = {

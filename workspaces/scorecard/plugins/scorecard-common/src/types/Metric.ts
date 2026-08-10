@@ -27,7 +27,7 @@ export type MetricType = 'number' | 'boolean';
  *
  * @public
  */
-export type MetricDefaultVisualization = 'value' | 'graph';
+export type MetricDefaultVisualization = 'value' | 'sparkline';
 
 /**
  * @public

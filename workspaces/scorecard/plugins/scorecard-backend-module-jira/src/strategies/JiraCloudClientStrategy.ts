@@ -81,11 +81,12 @@ export class JiraCloudClientStrategy extends JiraClient {
         results.push(...mapped);
       }
 
-      if (paging.nextPageToken) {
-        nextPageToken = paging.nextPageToken;
-        hasMorePages = true;
-      } else {
+      const token = paging.nextPageToken?.trim()
+      if (paging.isLast === true || !token) {
         hasMorePages = false;
+      } else {
+        nextPageToken = token;
+        hasMorePages = true;
       }
     }
 

@@ -23,3 +23,10 @@ export function formatUtcDate(timestamp: Date): string {
   const day = String(timestamp.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Formats a UTC calendar day (`YYYY-MM-DD`) as an ISO-8601 timestamp at midnight UTC.
+ */
+export function formatUtcDateAsStartOfDayIso(utcDay: string): string {
+  return `${utcDay}T00:00:00.000Z`;
+}

@@ -22,6 +22,7 @@ import {
 import type {
   MetricResult,
   AggregatedMetricResult,
+  AggregatedMetricTimeSeriesResponse,
   AggregationMetadata,
   Metric,
   EntityMetricDetailResponse,
@@ -361,6 +362,55 @@ export class ScorecardApiClient implements ScorecardApi {
       }
       throw new Error(
         `Unexpected error fetching aggregation metadata: ${String(error)}`,
+      );
+    }
+  }
+
+  async getAggregationTimeSeries(
+    aggregationId: string,
+    from: string,
+    to: string,
+  ): Promise<AggregatedMetricTimeSeriesResponse> {
+    if (!aggregationId || aggregationId.trim() === '') {
+      throw new Error('Aggregation ID is required for aggregation time-series');
+    }
+
+    const baseUrl = await this.getBaseUrl();
+    const url = new URL(`${baseUrl}/aggregations/${aggregationId}/time-series`);
+    url.searchParams.set('from', from);
+    url.searchParams.set('to', to);
+
+    try {
+      const response = await this.fetchApi.fetch(url.toString());
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to fetch aggregation time-series: ${response.status} ${response.statusText}. ${errorText}`,
+        );
+      }
+
+      const data = await response.json();
+
+      if (
+        !data ||
+        Array.isArray(data) ||
+        typeof data !== 'object' ||
+        !('points' in data) ||
+        !Array.isArray(data.points)
+      ) {
+        throw new TypeError(
+          'Invalid response format from aggregation time-series API',
+        );
+      }
+
+      return data as AggregatedMetricTimeSeriesResponse;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(
+        `Unexpected error fetching aggregation time-series: ${String(error)}`,
       );
     }
   }

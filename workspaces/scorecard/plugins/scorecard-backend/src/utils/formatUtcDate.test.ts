@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { formatUtcDate } from './formatUtcDate';
+import { formatUtcDate, formatUtcDateAsStartOfDayIso } from './formatUtcDate';
 
 describe('formatUtcDate', () => {
   it('should return YYYY-MM-DD for a Date', () => {
@@ -26,6 +26,14 @@ describe('formatUtcDate', () => {
   it('should use UTC calendar day', () => {
     expect(formatUtcDate(new Date('2024-06-15T01:00:00.000Z'))).toBe(
       '2024-06-15',
+    );
+  });
+});
+
+describe('formatUtcDateAsStartOfDayIso', () => {
+  it('should append midnight UTC to a YYYY-MM-DD day', () => {
+    expect(formatUtcDateAsStartOfDayIso('2024-01-01')).toBe(
+      '2024-01-01T00:00:00.000Z',
     );
   });
 });

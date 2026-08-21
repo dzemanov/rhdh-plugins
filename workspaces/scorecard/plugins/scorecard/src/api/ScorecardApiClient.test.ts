@@ -307,4 +307,38 @@ describe('ScorecardApiClient', () => {
       );
     });
   });
+
+  describe('getAggregationTimeSeries', () => {
+    it('should fetch time-series path with from and to', async () => {
+      const payload = {
+        id: 'myKpi',
+        metricId: 'github.openPRs',
+        points: [],
+        metadata: {
+          title: 'T',
+          description: 'D',
+          type: 'number',
+          history: false,
+          aggregationType: 'sum',
+        },
+        thresholds: { rules: [] },
+        aggregationChartDisplayColor: null,
+      };
+      fetchApi.fetch.mockResolvedValue({
+        ok: true,
+        json: async () => payload,
+      });
+
+      const out = await client.getAggregationTimeSeries(
+        'myKpi',
+        '2024-01-01T00:00:00.000Z',
+        '2024-01-31T00:00:00.000Z',
+      );
+
+      expect(fetchApi.fetch).toHaveBeenCalledWith(
+        'http://localhost:7007/api/scorecard/aggregations/myKpi/time-series?from=2024-01-01T00%3A00%3A00.000Z&to=2024-01-31T00%3A00%3A00.000Z',
+      );
+      expect(out).toEqual(payload);
+    });
+  });
 });

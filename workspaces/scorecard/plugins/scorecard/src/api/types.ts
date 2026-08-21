@@ -20,6 +20,7 @@ import {
   AggregatedMetricResult,
   MetricResult,
   AggregationMetadata,
+  AggregatedMetricTimeSeriesResponse,
   Metric,
   EntityMetricDetailResponse,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
@@ -86,4 +87,16 @@ export interface ScorecardApi {
    * @throws Error if the request fails or returns invalid data
    */
   getAggregationMetadata(aggregationId: string): Promise<AggregationMetadata>;
+
+  /**
+   * Retrieves daily aggregated metric values for a KPI.
+   * @param aggregationId - KPI key or metric id
+   * @param from - Inclusive range start (ISO-8601)
+   * @param to - Inclusive range end (ISO-8601)
+   */
+  getAggregationTimeSeries(
+    aggregationId: string,
+    from: string,
+    to: string,
+  ): Promise<AggregatedMetricTimeSeriesResponse>;
 }

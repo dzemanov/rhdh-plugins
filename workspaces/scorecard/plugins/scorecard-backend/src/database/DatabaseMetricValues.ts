@@ -21,6 +21,7 @@ import {
   DbMetricValue,
   DbAggregatedMetric,
   DbScalarAggregatedMetric,
+  DbScalarTimeSeriesPoint,
   ScalarAggregationFn,
 } from './types';
 import { normalizeTimestamp } from '../utils/normalizeTimestamp';
@@ -73,7 +74,30 @@ export class DatabaseMetricValues {
   private static readonly metricValueIsMissingExpr =
     "(value IS NULL OR CAST(value AS TEXT) = 'null')";
 
-  constructor(private readonly dbClient: Knex<any, any[]>) {}
+  private readonly dbClient: Knex<any, any[]>;
+  private readonly isPostgres: boolean;
+
+  constructor(dbClient: Knex<any, any[]>) {
+    this.dbClient = dbClient;
+    const clientName: string = (dbClient as any).client?.config?.client ?? '';
+    this.isPostgres = clientName === 'pg' || clientName.includes('postgres');
+  }
+
+  /**
+   * UTC calendar day as `YYYY-MM-DD`. Postgres `timestamp` is treated as UTC;
+   * SQLite stores Unix milliseconds.
+   */
+  private getUtcDayExpr(): string {
+    return this.isPostgres
+      ? "TO_CHAR(timestamp AT TIME ZONE 'UTC', 'YYYY-MM-DD')"
+      : "strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch')";
+  }
+
+  private getNumericValueExpr(): string {
+    return this.isPostgres
+      ? 'CAST(value::text AS DOUBLE PRECISION)'
+      : 'CAST(CAST(value AS TEXT) AS REAL)';
+  }
 
   /**
    * Get the latest ids subquery for a given metric and catalog entity refs
@@ -87,6 +111,34 @@ export class DatabaseMetricValues {
       .where('metric_id', metricId)
       .whereIn('catalog_entity_ref', catalogEntityRefs)
       .groupBy('catalog_entity_ref');
+  }
+
+  /**
+   * Get latest successful row ids per entity and UTC day in `[from, to]` for a metric.
+   *
+   * Groups `metric_values` by `(catalog_entity_ref, UTC day)` and picks
+   * `MAX(id)` among rows that have a real metric value.
+   * Days/entities with only calculation failures are dropped via HAVING.
+   * Aggregation time-series readers restrict to these ids.
+   */
+  private getLatestIdsPerEntityUtcDayWithSuccessSubquery(
+    catalogEntityRefs: string[],
+    metricId: string,
+    from: Date,
+    to: Date,
+  ): Knex.QueryBuilder {
+    const utcDayExpr = this.getUtcDayExpr();
+    const missing = DatabaseMetricValues.metricValueIsMissingExpr;
+    const chosenIdExpr = `MAX(CASE WHEN NOT ${missing} THEN id END)`;
+
+    return this.dbClient(this.tableName)
+      .select(this.dbClient.raw(`${chosenIdExpr} as id`))
+      .whereIn('catalog_entity_ref', catalogEntityRefs)
+      .where('metric_id', metricId)
+      .where('timestamp', '>=', from)
+      .where('timestamp', '<=', to)
+      .groupByRaw(`catalog_entity_ref, ${utcDayExpr}`)
+      .havingRaw(`${chosenIdExpr} IS NOT NULL`);
   }
 
   /**
@@ -135,13 +187,7 @@ export class DatabaseMetricValues {
     aggregationFn: ScalarAggregationFn,
     filter?: AggregationConfigFilter,
   ): Promise<ScalarAggregationRowResult> {
-    const clientName: string =
-      (this.dbClient as any).client?.config?.client ?? '';
-    const isPostgres = clientName === 'pg' || clientName.includes('postgres');
-
-    const numericValueExpr = isPostgres
-      ? 'CAST(value::text AS DOUBLE PRECISION)'
-      : 'CAST(CAST(value AS TEXT) AS REAL)';
+    const numericValueExpr = this.getNumericValueExpr();
 
     const aggregateExpression = getAggregateExpression(
       aggregationFn,
@@ -379,6 +425,73 @@ export class DatabaseMetricValues {
   }
 
   /**
+   * Scalar aggregation of latest successful values per entity per UTC day.
+   * Days with no successful contributors are omitted.
+   *
+   * Query plan:
+   * 1. Subquery: latest success id per (entity, UTC day) in [from, to] range for metricId.
+   * 2. Outer: join those ids, optionally filter by `status`, then
+   *    `GROUP BY UTC day` with sum/avg/count/max/min over numeric `value`.
+   */
+  async readScalarAggregatedMetricTimeSeriesByEntityRefs(
+    catalogEntityRefs: string[],
+    metricId: string,
+    aggregationFn: ScalarAggregationFn,
+    from: Date,
+    to: Date,
+    filter?: AggregationConfigFilter,
+  ): Promise<DbScalarTimeSeriesPoint[]> {
+    if (catalogEntityRefs.length === 0) {
+      return [];
+    }
+
+    const utcDayExpr = this.getUtcDayExpr();
+    const latestIdsSubquery =
+      this.getLatestIdsPerEntityUtcDayWithSuccessSubquery(
+        catalogEntityRefs,
+        metricId,
+        from,
+        to,
+      );
+    const missing = DatabaseMetricValues.metricValueIsMissingExpr;
+    const aggregateExpression = getAggregateExpression(
+      aggregationFn,
+      this.getNumericValueExpr(),
+      `NOT ${missing}`,
+    );
+
+    const query = this.dbClient(this.tableName).whereIn(
+      'id',
+      latestIdsSubquery,
+    );
+
+    if (filter?.status && filter.status !== '') {
+      query.where('status', filter.status);
+    }
+
+    const rows = await query
+      .select(
+        this.dbClient.raw(`${utcDayExpr} as utc_day`),
+        this.dbClient.raw(`${aggregateExpression} as value`),
+        this.dbClient.raw('COUNT(*) as total'),
+      )
+      .groupByRaw(utcDayExpr)
+      .orderBy('utc_day', 'asc');
+
+    return (rows as { utc_day: string; value: unknown; total: unknown }[])
+      .map(row => {
+        const total = Number(row.total);
+        const value = Number(row.value);
+        return {
+          utcDay: String(row.utc_day),
+          value: Number.isFinite(value) ? value : 0,
+          total: Number.isFinite(total) ? total : 0,
+        };
+      })
+      .filter(point => point.total > 0);
+  }
+
+  /**
    * Fetch the latest entity metric values for a given metric, with optional filtering
    * by status, name, kind, namespace, or owner, plus sorting and pagination.
    */
@@ -386,10 +499,6 @@ export class DatabaseMetricValues {
     metricId: string,
     options: ReadEntityMetricsWithFiltersOptions,
   ): Promise<DbMetricValue[]> {
-    const clientName: string =
-      (this.dbClient as any).client?.config?.client ?? '';
-    const isPostgres = clientName === 'pg' || clientName.includes('postgres');
-
     const latestIdsSubquery = this.dbClient(this.tableName)
       .max('id')
       .where('metric_id', metricId)
@@ -413,7 +522,7 @@ export class DatabaseMetricValues {
       (options.sortBy && sortColumnMap[options.sortBy]) ?? 'timestamp';
     const direction = options.sortOrder === 'asc' ? 'asc' : 'desc';
 
-    this.applySort(query, options.sortBy, column, direction, isPostgres);
+    this.applySort(query, options.sortBy, column, direction);
 
     if (options.status) {
       query.where('status', options.status);
@@ -449,11 +558,10 @@ export class DatabaseMetricValues {
     sortBy: string | undefined,
     column: string,
     direction: string,
-    isPostgres: boolean,
   ): void {
     if (sortBy === 'metricValue') {
       // value is JSON and nullable; cast for numeric sort with NULLs last
-      if (isPostgres) {
+      if (this.isPostgres) {
         query.orderByRaw(
           `CAST(value::text AS DOUBLE PRECISION) ${direction} NULLS LAST, id ASC`,
         );
@@ -465,7 +573,7 @@ export class DatabaseMetricValues {
       }
     } else if (sortBy === 'status') {
       // status is nullable; NULLs always sort last regardless of direction
-      if (isPostgres) {
+      if (this.isPostgres) {
         query.orderByRaw(`status ${direction} NULLS LAST, id ASC`);
       } else {
         // SQLite: "status IS NULL" evaluates to 1 for NULLs, pushing them to the end

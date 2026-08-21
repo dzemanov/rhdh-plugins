@@ -23,6 +23,10 @@ export type AggregatedMetricResult = {
   result: AggregationResultByType;
 };
 
+// @public
+export type AggregatedMetricTimeSeriesResponse =
+  ScalarAggregatedMetricTimeSeriesResponse;
+
 // @public (undocumented)
 export type AggregatedMetricValue = {
   count: number;
@@ -203,6 +207,23 @@ export const RESOURCE_TYPE_SCORECARD_METRIC = 'scorecard-metric';
 // @public (undocumented)
 export type ScalarAggregatedMetric = Omit<AggregatedMetric, 'values'> & {
   value: number;
+};
+
+// @public
+export type ScalarAggregatedMetricTimeSeriesResponse = {
+  id: string;
+  metricId: string;
+  metadata: AggregationMetadata;
+  points: ScalarAggregatedTimeSeriesPoint[];
+  thresholds: ThresholdConfig;
+  aggregationChartDisplayColor: string | null;
+};
+
+// @public
+export type ScalarAggregatedTimeSeriesPoint = {
+  value: number;
+  total: number;
+  timestamp: string;
 };
 
 // @public (undocumented)

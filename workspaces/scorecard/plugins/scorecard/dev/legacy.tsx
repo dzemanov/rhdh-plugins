@@ -40,6 +40,7 @@ import type {
   Metric,
   EntityMetricDetailResponse,
   AggregationMetadata,
+  AggregatedMetricTimeSeriesResponse,
 } from '@red-hat-developer-hub/backstage-plugin-scorecard-common';
 import { CatalogEntityPage } from '@backstage/plugin-catalog';
 
@@ -102,6 +103,26 @@ class MockScorecardApi implements ScorecardApi {
       description: 'GitHub open issues',
       type: 'number',
       aggregationType: 'statusGrouped',
+    };
+  }
+
+  async getAggregationTimeSeries(
+    aggregationId: string,
+    _from: string,
+    _to: string,
+  ): Promise<AggregatedMetricTimeSeriesResponse> {
+    return {
+      id: aggregationId,
+      metricId: aggregationId,
+      points: [],
+      metadata: {
+        title: 'GitHub open issues',
+        description: 'GitHub open issues',
+        type: 'number',
+        aggregationType: 'sum',
+      },
+      thresholds: { rules: [] },
+      aggregationChartDisplayColor: null,
     };
   }
 

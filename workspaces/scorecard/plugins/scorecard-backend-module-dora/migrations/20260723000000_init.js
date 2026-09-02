@@ -19,6 +19,7 @@ exports.up = async function up(knex) {
     table.string('id').primary().notNullable();
     table.string('catalog_entity_ref').notNullable();
     table.string('collector_id').notNullable();
+    table.string('collector_input_hash').notNullable();
     table.string('original_deployment_id').notNullable();
     table.string('commit_sha').notNullable();
     table.string('environment').nullable();
@@ -28,11 +29,12 @@ exports.up = async function up(knex) {
     table.unique([
       'catalog_entity_ref',
       'collector_id',
+      'collector_input_hash',
       'original_deployment_id',
     ]);
-    // Deployment reads: entity + collector + created_at window (ordered by created_at)
+    // Deployment reads: entity + collector + input + created_at window (ordered by created_at)
     table.index(
-      ['catalog_entity_ref', 'collector_id', 'created_at'],
+      ['catalog_entity_ref', 'collector_id', 'collector_input_hash', 'created_at'],
       'dora_deployments_entity_collector_created_at_idx',
     );
   });
@@ -41,6 +43,7 @@ exports.up = async function up(knex) {
     table.string('id').primary().notNullable();
     table.string('catalog_entity_ref').notNullable();
     table.string('collector_id').notNullable();
+    table.string('collector_input_hash').notNullable();
     table.string('original_incident_id').notNullable();
     table.dateTime('created_at', { precision: 3 }).notNullable();
     table.dateTime('updated_at', { precision: 3 }).notNullable();
@@ -49,11 +52,12 @@ exports.up = async function up(knex) {
     table.unique([
       'catalog_entity_ref',
       'collector_id',
+      'collector_input_hash',
       'original_incident_id',
     ]);
-    // Incident reads: entity + collector + created_at window (ordered by created_at)
+    // Incident reads: entity + collector + collector input + created_at window (ordered by created_at)
     table.index(
-      ['catalog_entity_ref', 'collector_id', 'created_at'],
+      ['catalog_entity_ref', 'collector_id', 'collector_input_hash', 'created_at'],
       'dora_incidents_entity_collector_created_at_idx',
     );
   });
@@ -62,6 +66,7 @@ exports.up = async function up(knex) {
     table.string('id').primary().notNullable();
     table.string('catalog_entity_ref').notNullable();
     table.string('collector_id').notNullable();
+    table.string('collector_input_hash').notNullable();
     table.string('original_pr_id').notNullable();
     table.dateTime('first_commit_at', { precision: 3 }).notNullable();
     table
@@ -74,12 +79,13 @@ exports.up = async function up(knex) {
     table.unique([
       'catalog_entity_ref',
       'collector_id',
+      'collector_input_hash',
       'original_pr_id',
       'deployment_id',
     ]);
-    // Lead-time reads: PRs for one entity/collector/deployment
+    // Lead-time reads: PRs for one entity/collector/input/deployment
     table.index(
-      ['catalog_entity_ref', 'collector_id', 'deployment_id'],
+      ['catalog_entity_ref', 'collector_id', 'collector_input_hash', 'deployment_id'],
       'dora_pull_requests_entity_collector_deployment_idx',
     );
   });
@@ -87,9 +93,10 @@ exports.up = async function up(knex) {
   await knex.schema.createTable('dora_last_sync', table => {
     table.string('catalog_entity_ref').notNullable();
     table.string('collector_id').notNullable();
+    table.string('collector_input_hash').notNullable();
     table.dateTime('last_synced_at', { precision: 3 }).notNullable();
 
-    table.primary(['catalog_entity_ref', 'collector_id']);
+    table.primary(['catalog_entity_ref', 'collector_id', 'collector_input_hash']);
   });
 };
 
